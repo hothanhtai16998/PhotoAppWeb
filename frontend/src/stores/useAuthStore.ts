@@ -45,7 +45,15 @@ export const useAuthStore =
 				);
 			} catch (error: unknown) {
 				const message =
-					(error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+					(
+						error as {
+							response?: {
+								data?: {
+									message?: string;
+								};
+							};
+						}
+					)?.response?.data?.message ||
 					'Registration failed. Please try again.';
 				toast.error(message);
 			} finally {
@@ -65,10 +73,12 @@ export const useAuthStore =
 						username,
 						password
 					);
-				
+
 				// Set access token
 				if (response.accessToken) {
-					get().setAccessToken(response.accessToken);
+					get().setAccessToken(
+						response.accessToken
+					);
 				}
 
 				// Set user if provided in response, otherwise fetch it
@@ -82,10 +92,51 @@ export const useAuthStore =
 					'Chào mừng bạn quay lại với Moji 🎉'
 				);
 			} catch (error: unknown) {
-				const message =
-					(error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-					'Login failed. Please check your credentials.';
-				toast.error(message);
+				const errorResponse = error as {
+					response?: {
+						data?: {
+							message?: string;
+							errors?: Array<{
+								msg?: string;
+								message?: string;
+							}>;
+						};
+					};
+				};
+
+				// Handle validation errors (express-validator format)
+				if (
+					errorResponse.response?.data
+						?.errors &&
+					Array.isArray(
+						errorResponse.response.data
+							.errors
+					)
+				) {
+					const validationErrors =
+						errorResponse.response.data.errors
+							.map(
+								(err: {
+									msg?: string;
+									message?: string;
+								}) =>
+									err.msg ||
+									err.message ||
+									'Validation failed'
+							)
+							.join(', ');
+					toast.error(
+						`Validation error: ${validationErrors}`
+					);
+				} else {
+					const message =
+						errorResponse.response?.data
+							?.message ||
+						'Login failed. Please check your credentials.';
+					toast.error(message);
+				}
+				// Re-throw error so form can handle navigation
+				throw error;
 			} finally {
 				set({ loading: false });
 			}
@@ -98,7 +149,7 @@ export const useAuthStore =
 				toast.success(
 					'Logout thành công!'
 				);
-			} catch (error: unknown) {
+			} catch {
 				// Don't show error toast on logout failure
 				// User is already logged out locally
 				// Log error silently
@@ -112,7 +163,7 @@ export const useAuthStore =
 					await authService.fetchMe();
 
 				set({ user });
-			} catch (error: unknown) {
+			} catch {
 				set({
 					user: null,
 					accessToken: null,
@@ -140,9 +191,18 @@ export const useAuthStore =
 					await fetchMe();
 				}
 			} catch (error: unknown) {
-				const errorStatus = (error as { response?: { status?: number } })?.response?.status;
+				const errorStatus = (
+					error as {
+						response?: {
+							status?: number;
+						};
+					}
+				)?.response?.status;
 				// Only show error if it's not a 401/403 (expected when not logged in)
-				if (errorStatus !== 401 && errorStatus !== 403) {
+				if (
+					errorStatus !== 401 &&
+					errorStatus !== 403
+				) {
 					toast.error(
 						'Session expired. Please log in again.'
 					);

@@ -52,6 +52,11 @@ const ImageGrid = () => {
                 src={image.imageUrl}
                 alt={image.imageTitle || 'Photo'}
                 loading="lazy"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/placeholder-image.png'; // Add fallback
+                  target.onerror = null; // Prevent infinite loop
+                }}
               />
               <div className="image-overlay">
                 <div className="image-actions">

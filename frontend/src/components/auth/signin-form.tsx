@@ -13,8 +13,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useAuthStore } from "@/stores/useAuthStore"
 
 const signInSchema = z.object({
-    username: z.string().min(6, { message: "Tên đăng nhập phải có ít nhất 3 ký tự." }),
-    password: z.string().min(8, { message: "Mật khẩu phải có ít nhất 8 ký tự." }),
+    username: z.string().min(1, { message: "Tên đăng nhập là bắt buộc." }),
+    password: z.string().min(1, { message: "Mật khẩu là bắt buộc." }),
 });
 
 type SignInFormValue = z.infer<typeof signInSchema>
@@ -32,10 +32,23 @@ export function SigninForm({
     })
 
     const onSubmit = async (data: SignInFormValue) => {
-        //gọi backend để xử lý
-        const { username, password } = data;
-        await signIn(username, password)
-        navigate("/");
+        try {
+            // Trim and validate before sending
+            const username = data.username.trim();
+            const password = data.password.trim();
+
+            if (!username || !password) {
+                return; // Form validation should prevent this, but double-check
+            }
+
+            //gọi backend để xử lý
+            await signIn(username, password);
+            // Only navigate on success (signIn throws on error)
+            navigate("/");
+        } catch (error) {
+            // Error is already handled by signIn in the store
+            // Don't navigate on error
+        }
     }
 
     return (

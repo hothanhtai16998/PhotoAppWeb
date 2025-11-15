@@ -26,6 +26,21 @@ api.interceptors.request.use(
 			config.headers.Authorization = `Bearer ${accessToken}`;
 		}
 
+		// Ensure Content-Type is set for JSON requests (if not already set)
+		if (
+			config.data &&
+			typeof config.data === 'object' &&
+			!config.headers?.[
+				'Content-Type'
+			] &&
+			!config.headers?.['content-type']
+		) {
+			if (config.headers) {
+				config.headers['Content-Type'] =
+					'application/json';
+			}
+		}
+
 		return config;
 	},
 	(error) => {

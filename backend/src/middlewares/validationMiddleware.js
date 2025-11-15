@@ -1,5 +1,6 @@
 import { body, param, query, validationResult } from 'express-validator';
 import { asyncHandler } from './asyncHandler.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Middleware to check validation results
@@ -7,9 +8,18 @@ import { asyncHandler } from './asyncHandler.js';
 export const validate = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+        const errorMessages = errors.array().map(err => err.msg || err.message || 'Validation failed');
+        // Log validation errors for debugging
+        logger.warn('Validation failed', {
+            url: req.url,
+            method: req.method,
+            body: req.body,
+            errors: errorMessages,
+        });
         return res.status(400).json({
             message: 'Validation error',
             errors: errors.array(),
+            errorMessages, // Add formatted messages for easier frontend handling
         });
     }
     next();
