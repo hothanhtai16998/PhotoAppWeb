@@ -1,26 +1,106 @@
-
+import { useEffect } from 'react';
+import { useImageStore } from '@/stores/useImageStore';
 import './ImageGrid.css';
 
-// Placeholder data - we will replace this with an API call later
-const images = [
-  { id: 1, src: 'https://images.pexels.com/photos/3225517/pexels-photo-3225517.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { id: 2, src: 'https://images.pexels.com/photos/2440061/pexels-photo-2440061.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { id: 3, src: 'https://images.pexels.com/photos/167699/pexels-photo-167699.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { id: 4, src: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { id: 5, src: 'https://images.pexels.com/photos/3408744/pexels-photo-3408744.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { id: 6, src: 'https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg?auto=compress&cs=tinysrgb&w=400' },
-];
-
 const ImageGrid = () => {
+  const { images, loading, error, fetchImages } = useImageStore();
+
+  useEffect(() => {
+    // Fetch images when component mounts
+    fetchImages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (loading && images.length === 0) {
+    return (
+      <div className="image-grid-container">
+        <div className="loading-state">
+          <p>Loading images...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="image-grid-container">
+        <div className="error-state">
+          <p>Error: {error}</p>
+          <button onClick={() => fetchImages()}>Try Again</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (images.length === 0) {
+    return (
+      <div className="image-grid-container">
+        <div className="empty-state">
+          <p>No images found. Be the first to upload one!</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="image-grid-container">
       <div className="image-grid">
-        {images.map(image => (
-          <div key={image.id} className="image-item">
-            <img src={image.src} alt={`Stock photo ${image.id}`} />
+        {images.map((image) => (
+          <div key={image._id} className="image-item">
+            <a href={image.imageUrl} target="_blank" rel="noopener noreferrer" className="image-link">
+              <img
+                src={image.imageUrl}
+                alt={image.imageTitle || 'Photo'}
+                loading="lazy"
+              />
+              <div className="image-overlay">
+                <div className="image-actions">
+                  <button
+                    className="image-action-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.open(image.imageUrl, '_blank');
+                    }}
+                    title="Download"
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                  </button>
+                  <button
+                    className="image-action-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      // Bookmark functionality can be added later
+                    }}
+                    title="Bookmark"
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                  </button>
+                </div>
+                <div className="image-info">
+                  {image.uploadedBy && (
+                    <div className="image-author-info">
+                      <span className="image-author-name">
+                        {image.uploadedBy.displayName || image.uploadedBy.username}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </a>
           </div>
         ))}
       </div>
+      {loading && images.length > 0 && (
+        <div className="loading-more">
+          <p>Loading more images...</p>
+        </div>
+      )}
     </div>
   );
 };
