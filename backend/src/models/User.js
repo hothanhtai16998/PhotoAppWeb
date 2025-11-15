@@ -25,10 +25,10 @@ const userSchema = new mongoose.Schema(
         displayName: {
             type: String,
             required: true,
-            trim: true,
         },
         avatarUrl: {
             type: String,
+            default: ''
         },
         avatarId: {
             type: String,
@@ -41,6 +41,9 @@ const userSchema = new mongoose.Schema(
             type: String,
             sparse: true,
         },
+        // location: {
+        //     type: String,
+        // }
     },
     {
         timestamps: true,

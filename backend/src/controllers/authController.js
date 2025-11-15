@@ -56,9 +56,9 @@ export const signIn = asyncHandler(async (req, res) => {
     }
 
     // Verify password
-    const passwordCorrect = await bcrypt.compare(password, user.hashedPassword);
+    const isPasswordMatch = await bcrypt.compare(password, user.hashedPassword);
 
-    if (!passwordCorrect) {
+    if (!isPasswordMatch) {
         return res.status(401).json({
             message: "Invalid username or password",
         });
