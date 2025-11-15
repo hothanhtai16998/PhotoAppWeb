@@ -1,0 +1,136 @@
+import api from '@/lib/axios';
+import type { UploadImageData } from '@/types/store';
+
+interface FetchImagesParams {
+	page?: number;
+	limit?: number;
+	search?: string;
+	category?: string;
+}
+
+interface FetchImagesResponse {
+	images: any[];
+	pagination?: {
+		page: number;
+		limit: number;
+		total: number;
+		pages: number;
+	};
+}
+
+export const imageService = {
+	uploadImage: async (
+		data: UploadImageData,
+		onUploadProgress?: (
+			progress: number
+		) => void
+	) => {
+		const formData = new FormData();
+		formData.append(
+			'image',
+			data.image
+		);
+		formData.append(
+			'imageTitle',
+			data.imageTitle
+		);
+		formData.append(
+			'imageCategory',
+			data.imageCategory
+		);
+
+		if (data.location) {
+			formData.append(
+				'location',
+				data.location
+			);
+		}
+		if (data.cameraModel) {
+			formData.append(
+				'cameraModel',
+				data.cameraModel
+			);
+		}
+
+		const res = await api.post(
+			'/images/upload',
+			formData,
+			{
+				headers: {
+					'Content-Type':
+						'multipart/form-data',
+				},
+				withCredentials: true,
+				timeout: 120000, // 2 minutes for uploads
+				onUploadProgress: (
+					progressEvent
+				) => {
+					if (
+						onUploadProgress &&
+						progressEvent.total
+					) {
+						const percentCompleted =
+							Math.round(
+								(progressEvent.loaded *
+									100) /
+									progressEvent.total
+							);
+						onUploadProgress(
+							percentCompleted
+						);
+					}
+				},
+			}
+		);
+
+		return res.data;
+	},
+
+	fetchImages: async (
+		params?: FetchImagesParams
+	): Promise<FetchImagesResponse> => {
+		const queryParams =
+			new URLSearchParams();
+
+		if (params?.page) {
+			queryParams.append(
+				'page',
+				params.page.toString()
+			);
+		}
+		if (params?.limit) {
+			queryParams.append(
+				'limit',
+				params.limit.toString()
+			);
+		}
+		if (params?.search) {
+			queryParams.append(
+				'search',
+				params.search
+			);
+		}
+		if (params?.category) {
+			queryParams.append(
+				'category',
+				params.category
+			);
+		}
+
+		const queryString =
+			queryParams.toString();
+		const url = queryString
+			? `/images?${queryString}`
+			: '/images';
+
+		const res = await api.get(url, {
+			withCredentials: true,
+		});
+
+		// Handle both old format (just images array) and new format (with pagination)
+		if (res.data.images) {
+			return res.data;
+		}
+		return { images: res.data };
+	},
+};
