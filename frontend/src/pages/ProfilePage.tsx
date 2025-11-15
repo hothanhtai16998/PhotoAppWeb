@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from 'react-hook-form';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
@@ -7,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
+import { userService } from "@/services/userService";
 import "./ProfilePage.css";
 
 type ProfileFormData = {
@@ -24,11 +27,25 @@ type ProfileFormData = {
     showMessageButton: boolean;
 };
 
+// Change password form schema
+const changePasswordSchema = z.object({
+    password: z.string().min(1, { message: "Current password is required" }),
+    newPassword: z.string().min(8, { message: "Password must be at least 8 characters" }),
+    newPasswordMatch: z.string().min(1, { message: "Password confirmation is required" }),
+}).refine((data) => data.newPassword === data.newPasswordMatch, {
+    message: "Passwords do not match",
+    path: ["newPasswordMatch"],
+});
+
+type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
+
 function ProfilePage() {
     const { user } = useAuthStore();
     const navigate = useNavigate();
     const [activeSection, setActiveSection] = useState('edit-profile');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [passwordError, setPasswordError] = useState<string | null>(null);
+    const [passwordSuccess, setPasswordSuccess] = useState(false);
 
     // Split displayName into firstName and lastName
     const nameParts = user?.displayName?.split(' ') || [];
@@ -71,6 +88,16 @@ function ProfilePage() {
         }
     }, [user, navigate, setValue]);
 
+    // Change password form
+    const {
+        register: registerPassword,
+        handleSubmit: handlePasswordSubmit,
+        formState: { errors: passwordErrors },
+        reset: resetPasswordForm
+    } = useForm<ChangePasswordFormData>({
+        resolver: zodResolver(changePasswordSchema),
+    });
+
     const onSubmit = async (data: ProfileFormData) => {
         setIsSubmitting(true);
         try {
@@ -80,6 +107,29 @@ function ProfilePage() {
             // await fetchMe(); // Refresh user data
         } catch (error) {
             console.error('Failed to update profile:', error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const onPasswordSubmit = async (data: ChangePasswordFormData) => {
+        setIsSubmitting(true);
+        setPasswordError(null);
+        setPasswordSuccess(false);
+
+        try {
+            await userService.changePassword(
+                data.password,
+                data.newPassword,
+                data.newPasswordMatch
+            );
+            setPasswordSuccess(true);
+            resetPasswordForm();
+            // Clear success message after 3 seconds
+            setTimeout(() => setPasswordSuccess(false), 3000);
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || "Failed to change password. Please try again.";
+            setPasswordError(errorMessage);
         } finally {
             setIsSubmitting(false);
         }
@@ -263,14 +313,79 @@ function ProfilePage() {
                             </form>
                         )}
 
-                        {activeSection !== 'edit-profile' && (
+                        {activeSection === 'change-password' && (
+                            <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="change-password-form">
+                                <h1 className="form-title">Change password</h1>
+
+                                <div className="form-field">
+                                    <Label htmlFor="password">Current password</Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        {...registerPassword('password')}
+                                        autoFocus
+                                    />
+                                    {passwordErrors.password && (
+                                        <p className="field-error">{passwordErrors.password.message}</p>
+                                    )}
+                                </div>
+
+                                <div className="form-field">
+                                    <Label htmlFor="newPassword">Password</Label>
+                                    <Input
+                                        id="newPassword"
+                                        type="password"
+                                        {...registerPassword('newPassword')}
+                                    />
+                                    {passwordErrors.newPassword && (
+                                        <p className="field-error">{passwordErrors.newPassword.message}</p>
+                                    )}
+                                </div>
+
+                                <div className="form-field">
+                                    <Label htmlFor="newPasswordMatch">Password confirmation</Label>
+                                    <Input
+                                        id="newPasswordMatch"
+                                        type="password"
+                                        {...registerPassword('newPasswordMatch')}
+                                    />
+                                    {passwordErrors.newPasswordMatch && (
+                                        <p className="field-error">{passwordErrors.newPasswordMatch.message}</p>
+                                    )}
+                                </div>
+
+                                {passwordError && (
+                                    <div className="password-error-message">
+                                        {passwordError}
+                                    </div>
+                                )}
+
+                                {passwordSuccess && (
+                                    <div className="password-success-message">
+                                        Password changed successfully!
+                                    </div>
+                                )}
+
+                                <div className="form-actions">
+                                    <Button
+                                        type="submit"
+                                        disabled={isSubmitting}
+                                        className="update-btn"
+                                    >
+                                        {isSubmitting ? 'Changing...' : 'Change password'}
+                                    </Button>
+                                </div>
+                            </form>
+                        )}
+
+                        {activeSection !== 'edit-profile' && activeSection !== 'change-password' && (
                             <div className="coming-soon">
                                 <h2>{menuItems.find(item => item.id === activeSection)?.label}</h2>
                                 <p>This section is coming soon.</p>
                             </div>
                         )}
                     </div>
-        </div>
+                </div>
             </main>
         </>
     );

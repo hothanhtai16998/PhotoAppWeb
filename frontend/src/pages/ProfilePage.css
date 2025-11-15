@@ -345,6 +345,42 @@
 	margin: 0;
 }
 
+/* Change Password Form */
+.change-password-form {
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	max-width: 500px;
+}
+
+.change-password-form .form-field {
+	margin-bottom: 0;
+}
+
+.field-error {
+	font-size: 0.8125rem;
+	color: #dc2626;
+	margin: 4px 0 0 0;
+}
+
+.password-error-message {
+	padding: 12px;
+	background: #fee2e2;
+	border: 1px solid #fecaca;
+	border-radius: 6px;
+	color: #dc2626;
+	font-size: 0.875rem;
+}
+
+.password-success-message {
+	padding: 12px;
+	background: #d1fae5;
+	border: 1px solid #a7f3d0;
+	border-radius: 6px;
+	color: #059669;
+	font-size: 0.875rem;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
 	.profile-settings-container {
