@@ -5,6 +5,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom"
 import { Search, X } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useImageStore } from "@/stores/useImageStore"
+import UploadModal from "./UploadModal"
 import './Header.css'
 
 export const Header = memo(function Header() {
@@ -14,6 +15,7 @@ export const Header = memo(function Header() {
   const location = useLocation()
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('Featured')
+  const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const categories = ['Featured', 'Wallpapers', '3D Renders', 'Nature', 'Textures', 'Film', 'Architecture', 'Street Photography', 'Experimental', 'Travel', 'People']
@@ -108,14 +110,14 @@ export const Header = memo(function Header() {
           <div className="header-actions">
             {accessToken ? (
               <>
-                <Link to="/upload" className="header-link">Submit an image</Link>
+                <button onClick={() => setUploadModalOpen(true)} className="header-link">Submit an image</button>
                 <Link to="/profile" className="header-link">Profile</Link>
                 <button onClick={handleSignOut} className="header-link">Log out</button>
               </>
             ) : (
               <>
                 <Link to="/signin" className="header-link">Log in</Link>
-                <Link to="/upload" className="header-button">Submit an image</Link>
+                <button onClick={() => navigate('/signin')} className="header-button">Submit an image</button>
               </>
             )}
           </div>
@@ -138,6 +140,9 @@ export const Header = memo(function Header() {
           </nav>
         </div>
       </div>
+
+      {/* Upload Modal */}
+      <UploadModal isOpen={uploadModalOpen} onClose={() => setUploadModalOpen(false)} />
     </header>
   )
 })
