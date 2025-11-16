@@ -443,12 +443,13 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                         ref={submitButtonRef}
                                         type="submit"
                                         disabled={loading || !isFormValid}
-                                        onClick={(e) => {
+                                        onMouseEnter={() => {
                                             if (!isFormValid && !loading) {
-                                                e.preventDefault();
                                                 setShowTooltip(true);
-                                                setTimeout(() => setShowTooltip(false), 3000);
                                             }
+                                        }}
+                                        onMouseLeave={() => {
+                                            setShowTooltip(false);
                                         }}
                                     >
                                         {loading ? 'Uploading...' : 'Submit to PhotoApp'}
