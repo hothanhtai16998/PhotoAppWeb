@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useImageStore } from '@/stores/useImageStore';
 import { ChevronRight, TrendingUp } from 'lucide-react';
 import type { Image } from '@/types/image';
@@ -39,17 +39,31 @@ const ImageGrid = () => {
 
   // Track image aspect ratios (portrait vs landscape)
   const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
-  const imageRefs = useRef<Map<string, HTMLImageElement>>(new Map());
+  const processedImages = useRef<Set<string>>(new Set());
 
-  // Determine image type when it loads
-  const handleImageLoad = (imageId: string, img: HTMLImageElement) => {
+  // Get current image IDs for comparison
+  const currentImageIds = useMemo(() => new Set(images.map(img => img._id)), [images]);
+
+  // Determine image type when it loads - memoized to prevent recreation
+  const handleImageLoad = useCallback((imageId: string, img: HTMLImageElement) => {
+    // Only process once per image and only if image still exists
+    if (!currentImageIds.has(imageId) || processedImages.current.has(imageId)) return;
+
+    processedImages.current.add(imageId);
     const isPortrait = img.naturalHeight > img.naturalWidth;
+    const imageType = isPortrait ? 'portrait' : 'landscape';
+
+    // Update state only if not already set (prevent unnecessary re-renders)
     setImageTypes(prev => {
+      if (prev.has(imageId)) return prev;
       const newMap = new Map(prev);
-      newMap.set(imageId, isPortrait ? 'portrait' : 'landscape');
+      newMap.set(imageId, imageType);
       return newMap;
     });
-  };
+  }, [currentImageIds]);
+
+  // Track attached handlers per image element to prevent re-attachment
+  const attachedHandlers = useRef<WeakMap<HTMLImageElement, boolean>>(new WeakMap());
 
   const handleTrendingClick = (search: string) => {
     fetchImages({ search });
@@ -147,7 +161,7 @@ const ImageGrid = () => {
       ) : (
         <div className="masonry-grid">
           {images.map((image) => {
-            const imageType = imageTypes.get(image._id) || 'landscape'; // Default to landscape
+            const imageType = imageTypes.get(image._id) || 'landscape'; // Get from state
             return (
               <div
                 key={image._id}
@@ -156,18 +170,29 @@ const ImageGrid = () => {
                 <a href={image.imageUrl} target="_blank" rel="noopener noreferrer" className="masonry-link">
                   <img
                     ref={(el) => {
-                      if (el && !imageRefs.current.has(image._id)) {
-                        imageRefs.current.set(image._id, el);
-                        if (el.complete) {
+                      if (!el) return;
+                      // Only process once per image element
+                      if (attachedHandlers.current.has(el)) return;
+                      attachedHandlers.current.set(el, true);
+
+                      // Check if image is already loaded
+                      if (el.complete && el.naturalWidth > 0 && el.naturalHeight > 0) {
+                        if (!processedImages.current.has(image._id) && currentImageIds.has(image._id)) {
                           handleImageLoad(image._id, el);
-                        } else {
-                          el.onload = () => handleImageLoad(image._id, el);
                         }
+                      } else {
+                        // Set up load handler only once with once: true
+                        el.addEventListener('load', () => {
+                          if (!processedImages.current.has(image._id) && currentImageIds.has(image._id)) {
+                            handleImageLoad(image._id, el);
+                          }
+                        }, { once: true });
                       }
                     }}
                     src={image.imageUrl}
                     alt={image.imageTitle || 'Photo'}
                     loading="lazy"
+                    decoding="async"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.src = '/placeholder-image.png';
