@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useImageStore } from '@/stores/useImageStore';
 import { ChevronRight, TrendingUp } from 'lucide-react';
 import type { Image } from '@/types/image';
@@ -36,6 +36,20 @@ const ImageGrid = () => {
       .filter(col => col.count >= 2)
       .slice(0, 4);
   }, [images]);
+
+  // Track image aspect ratios (portrait vs landscape)
+  const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
+  const imageRefs = useRef<Map<string, HTMLImageElement>>(new Map());
+
+  // Determine image type when it loads
+  const handleImageLoad = (imageId: string, img: HTMLImageElement) => {
+    const isPortrait = img.naturalHeight > img.naturalWidth;
+    setImageTypes(prev => {
+      const newMap = new Map(prev);
+      newMap.set(imageId, isPortrait ? 'portrait' : 'landscape');
+      return newMap;
+    });
+  };
 
   const handleTrendingClick = (search: string) => {
     fetchImages({ search });
@@ -131,61 +145,77 @@ const ImageGrid = () => {
           <p>No images found. Be the first to upload one!</p>
         </div>
       ) : (
-        <div className="image-grid">
-          {images.map((image) => (
-            <div key={image._id} className="image-item">
-              <a href={image.imageUrl} target="_blank" rel="noopener noreferrer" className="image-link">
-                <img
-                  src={image.imageUrl}
-                  alt={image.imageTitle || 'Photo'}
-                  loading="lazy"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/placeholder-image.png';
-                    target.onerror = null;
-                  }}
-                />
-                <div className="image-overlay">
-                  <div className="image-actions">
-                    <button
-                      className="image-action-btn"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        window.open(image.imageUrl, '_blank');
-                      }}
-                      title="Download"
-                    >
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                      </svg>
-                    </button>
-                    <button
-                      className="image-action-btn"
-                      onClick={(e) => {
-                        e.preventDefault();
-                      }}
-                      title="Bookmark"
-                    >
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                      </svg>
-                    </button>
+        <div className="masonry-grid">
+          {images.map((image) => {
+            const imageType = imageTypes.get(image._id) || 'landscape'; // Default to landscape
+            return (
+              <div
+                key={image._id}
+                className={`masonry-item ${imageType}`}
+              >
+                <a href={image.imageUrl} target="_blank" rel="noopener noreferrer" className="masonry-link">
+                  <img
+                    ref={(el) => {
+                      if (el && !imageRefs.current.has(image._id)) {
+                        imageRefs.current.set(image._id, el);
+                        if (el.complete) {
+                          handleImageLoad(image._id, el);
+                        } else {
+                          el.onload = () => handleImageLoad(image._id, el);
+                        }
+                      }
+                    }}
+                    src={image.imageUrl}
+                    alt={image.imageTitle || 'Photo'}
+                    loading="lazy"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/placeholder-image.png';
+                      target.onerror = null;
+                    }}
+                  />
+                  <div className="masonry-overlay">
+                    <div className="image-actions">
+                      <button
+                        className="image-action-btn"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          window.open(image.imageUrl, '_blank');
+                        }}
+                        title="Download"
+                      >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                          <polyline points="7 10 12 15 17 10"></polyline>
+                          <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                      </button>
+                      <button
+                        className="image-action-btn"
+                        onClick={(e) => {
+                          e.preventDefault();
+                        }}
+                        title="Bookmark"
+                      >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="image-info">
+                      {image.uploadedBy && (
+                        <div className="image-author-info">
+                          <span className="image-author-name">
+                            {image.uploadedBy.displayName || image.uploadedBy.username}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="image-info">
-                    {image.uploadedBy && (
-                      <div className="image-author-info">
-                        <span className="image-author-name">
-                          {image.uploadedBy.displayName || image.uploadedBy.username}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </a>
-            </div>
-          ))}
+                </a>
+              </div>
+            );
+          })}
         </div>
       )}
       {loading && images.length > 0 && (
