@@ -65,19 +65,15 @@ export const imageService = {
 				onUploadProgress: (
 					progressEvent
 				) => {
-					if (
-						onUploadProgress &&
-						progressEvent.total
-					) {
-						const percentCompleted =
-							Math.round(
-								(progressEvent.loaded *
-									100) /
-									progressEvent.total
-							);
-						onUploadProgress(
-							percentCompleted
+					if (onUploadProgress && progressEvent.total) {
+						// Calculate HTTP upload progress (uploading file to our backend)
+						// Cap at 85% - the remaining 15% is for Cloudinary upload on backend
+						const httpProgress = Math.round(
+							(progressEvent.loaded * 100) / progressEvent.total
 						);
+						// Show 0-85% during HTTP upload to backend
+						const percentCompleted = Math.min(85, httpProgress);
+						onUploadProgress(percentCompleted);
 					}
 				},
 			}

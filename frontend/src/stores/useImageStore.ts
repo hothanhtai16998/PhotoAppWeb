@@ -28,17 +28,26 @@ export const useImageStore = create(
 						data,
 						(progress) => {
 							set((state) => {
-								state.uploadProgress =
-									progress;
+								// Progress tracks HTTP upload (0-90%)
+								state.uploadProgress = progress;
 							});
 						}
 					);
+				// HTTP upload to backend complete (85%)
+				// Now backend is uploading to Cloudinary - show 85-95% range
+				set((state) => {
+					state.uploadProgress = 90; // Show we're processing
+				});
+				
+				// Backend response received = Cloudinary upload AND processing complete
+				// The response only comes after Cloudinary finishes
 				set((state) => {
 					state.images.unshift(
 						response.image
 					);
-					state.loading = false;
+					// Now set to 100% - everything is complete
 					state.uploadProgress = 100;
+					state.loading = false;
 				});
 				toast.success(
 					'Image uploaded successfully!'

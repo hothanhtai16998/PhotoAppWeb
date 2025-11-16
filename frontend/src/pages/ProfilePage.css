@@ -94,6 +94,12 @@
 	flex-shrink: 0;
 }
 
+.profile-image-wrapper {
+	position: relative;
+	width: 120px;
+	height: 120px;
+}
+
 .profile-image,
 .profile-image-placeholder {
 	width: 120px;
@@ -107,6 +113,50 @@
 	font-size: 2.5rem;
 	font-weight: 600;
 	color: #767676;
+}
+
+.image-upload-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.7);
+	border-radius: 50%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	z-index: 10;
+}
+
+.upload-spinner {
+	width: 32px;
+	height: 32px;
+	border: 3px solid
+		rgba(255, 255, 255, 0.3);
+	border-top-color: #fff;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+}
+
+.upload-text {
+	color: #fff;
+	font-size: 0.75rem;
+	font-weight: 500;
+	margin: 0;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.change-image-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 
 .change-image-btn {

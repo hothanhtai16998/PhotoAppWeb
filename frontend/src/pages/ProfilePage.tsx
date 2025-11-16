@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 import { userService } from "@/services/userService";
+import { toast } from "sonner";
 import "./ProfilePage.css";
 
 type ProfileFormData = {
@@ -40,12 +41,16 @@ const changePasswordSchema = z.object({
 type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
 
 function ProfilePage() {
-    const { user } = useAuthStore();
+    const { user, fetchMe } = useAuthStore();
     const navigate = useNavigate();
     const [activeSection, setActiveSection] = useState('edit-profile');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [passwordError, setPasswordError] = useState<string | null>(null);
     const [passwordSuccess, setPasswordSuccess] = useState(false);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Split displayName into firstName and lastName
     const nameParts = user?.displayName?.split(' ') || [];
@@ -98,17 +103,75 @@ function ProfilePage() {
         resolver: zodResolver(changePasswordSchema),
     });
 
+    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                toast.error('Please select an image file');
+                return;
+            }
+
+            // Validate file size (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                toast.error('Image size must be less than 10MB');
+                return;
+            }
+
+            setSelectedAvatar(file);
+
+            // Create preview
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setAvatarPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleAvatarButtonClick = () => {
+        fileInputRef.current?.click();
+    };
+
     const onSubmit = async (data: ProfileFormData) => {
         setIsSubmitting(true);
+        setIsUploadingAvatar(!!selectedAvatar);
+
         try {
-            // TODO: Implement profile update API call
-            console.log('Profile update data:', data);
-            // await updateProfile(data);
-            // await fetchMe(); // Refresh user data
-        } catch (error) {
-            console.error('Failed to update profile:', error);
+            const formData = new FormData();
+
+            // Add text fields
+            formData.append('firstName', data.firstName);
+            formData.append('lastName', data.lastName);
+            formData.append('email', data.email);
+            if (data.bio) {
+                formData.append('bio', data.bio);
+            }
+
+            // Add avatar if selected
+            if (selectedAvatar) {
+                formData.append('avatar', selectedAvatar);
+            }
+
+            await userService.updateProfile(formData);
+
+            // Refresh user data
+            await fetchMe();
+
+            // Clear avatar preview and selection
+            setAvatarPreview(null);
+            setSelectedAvatar(null);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+
+            toast.success('Profile updated successfully');
+        } catch (error: unknown) {
+            const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to update profile. Please try again.";
+            toast.error(errorMessage);
         } finally {
             setIsSubmitting(false);
+            setIsUploadingAvatar(false);
         }
     };
 
@@ -127,8 +190,8 @@ function ProfilePage() {
             resetPasswordForm();
             // Clear success message after 3 seconds
             setTimeout(() => setPasswordSuccess(false), 3000);
-        } catch (error: any) {
-            const errorMessage = error.response?.data?.message || "Failed to change password. Please try again.";
+        } catch (error: unknown) {
+            const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to change password. Please try again.";
             setPasswordError(errorMessage);
         } finally {
             setIsSubmitting(false);
@@ -179,14 +242,31 @@ function ProfilePage() {
                                 {/* Profile Image Section */}
                                 <div className="profile-image-section">
                                     <div className="profile-image-container">
-                                        {user.avatarUrl ? (
-                                            <img src={user.avatarUrl} alt={user.displayName} className="profile-image" />
-                                        ) : (
-                                            <div className="profile-image-placeholder">
-                                                {user.displayName?.charAt(0).toUpperCase() || user.username?.charAt(0).toUpperCase()}
-                                            </div>
-                                        )}
-                                        <button type="button" className="change-image-btn">
+                                        <div className="profile-image-wrapper">
+                                            {avatarPreview ? (
+                                                <img src={avatarPreview} alt="Preview" className="profile-image" />
+                                            ) : user.avatarUrl ? (
+                                                <img src={user.avatarUrl} alt={user.displayName} className="profile-image" />
+                                            ) : (
+                                                <div className="profile-image-placeholder">
+                                                    {user.displayName?.charAt(0).toUpperCase() || user.username?.charAt(0).toUpperCase()}
+                                                </div>
+                                            )}
+                                            {isUploadingAvatar && (
+                                                <div className="image-upload-overlay">
+                                                    <div className="upload-spinner"></div>
+                                                    <p className="upload-text">Uploading...</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleAvatarChange}
+                                            style={{ display: 'none' }}
+                                        />
+                                        <button type="button" className="change-image-btn" onClick={handleAvatarButtonClick} disabled={isUploadingAvatar}>
                                             Change profile image
                                         </button>
                                     </div>

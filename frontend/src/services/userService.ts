@@ -17,4 +17,21 @@ export const userService = {
 		);
 		return res.data;
 	},
+
+	updateProfile: async (
+		formData: FormData
+	) => {
+		const res = await api.put(
+			'/users/change-info',
+			formData,
+			{
+				withCredentials: true,
+				headers: {
+					'Content-Type':
+						'multipart/form-data',
+				},
+			}
+		);
+		return res.data;
+	},
 };

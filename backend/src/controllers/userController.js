@@ -1,6 +1,9 @@
 import { asyncHandler } from "../middlewares/asyncHandler.js";
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
+import cloudinary from "../libs/cloudinary.js";
+import { Readable } from 'stream';
+import { logger } from '../utils/logger.js';
 
 export const authMe = asyncHandler(async (req, res) => {
     const user = req.user; // From authMiddleware
@@ -51,4 +54,99 @@ export const changePassword = asyncHandler(async (req, res) => {
 
 export const forgotPassword = asyncHandler(async (req, res) => { })
 
-export const changeInfo = asyncHandler(async (req, res) => { })
+export const changeInfo = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
+    const { firstName, lastName, email, bio } = req.body;
+
+    // Get current user to check for existing avatar
+    const currentUser = await User.findById(userId);
+
+    const updateData = {};
+
+    // Update displayName if firstName/lastName provided
+    if (firstName || lastName) {
+        const firstNameValue = firstName?.trim() || '';
+        const lastNameValue = lastName?.trim() || '';
+        updateData.displayName = `${firstNameValue} ${lastNameValue}`.trim();
+    }
+
+    // Update email if provided
+    if (email) {
+        // Check if email is already taken by another user
+        const existingEmail = await User.findOne({
+            email: email.toLowerCase().trim(),
+            _id: { $ne: userId }
+        });
+
+        if (existingEmail) {
+            return res.status(409).json({
+                message: "Email already exists"
+            });
+        }
+        updateData.email = email.toLowerCase().trim();
+    }
+
+    // Update bio if provided
+    if (bio !== undefined) {
+        updateData.bio = bio.trim() || undefined;
+    }
+
+    // Handle avatar upload if file is provided
+    if (req.file) {
+        let uploadResponse;
+        try {
+            // Convert buffer to readable stream
+            const bufferStream = Readable.from(req.file.buffer);
+
+            uploadResponse = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                    {
+                        folder: 'photo-app-avatars',
+                        resource_type: 'image',
+                        transformation: [
+                            { width: 200, height: 200, crop: 'fill', gravity: 'face' },
+                            { quality: 'auto:good' },
+                            { fetch_format: 'auto' },
+                        ],
+                    },
+                    (error, result) => {
+                        if (error) reject(error);
+                        else resolve(result);
+                    }
+                );
+
+                bufferStream.pipe(uploadStream);
+            });
+
+            // Delete old avatar from Cloudinary if exists
+            if (currentUser.avatarId) {
+                try {
+                    await cloudinary.uploader.destroy(currentUser.avatarId);
+                } catch (deleteError) {
+                    logger.warn('Failed to delete old avatar', deleteError);
+                    // Continue even if deletion fails
+                }
+            }
+
+            updateData.avatarUrl = uploadResponse.secure_url;
+            updateData.avatarId = uploadResponse.public_id;
+        } catch (error) {
+            logger.error('Failed to upload avatar', error);
+            return res.status(500).json({
+                message: "Failed to upload avatar"
+            });
+        }
+    }
+
+    // Update user
+    const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        updateData,
+        { new: true, runValidators: true }
+    ).select('-hashedPassword');
+
+    return res.status(200).json({
+        message: "Profile updated successfully",
+        user: updatedUser
+    });
+})
