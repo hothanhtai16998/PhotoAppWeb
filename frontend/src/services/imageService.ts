@@ -129,4 +129,32 @@ export const imageService = {
 		}
 		return { images: res.data };
 	},
+
+	fetchUserImages: async (
+		userId: string,
+		params?: FetchImagesParams
+	): Promise<FetchImagesResponse> => {
+		const queryParams = new URLSearchParams();
+
+		if (params?.page) {
+			queryParams.append('page', params.page.toString());
+		}
+		if (params?.limit) {
+			queryParams.append('limit', params.limit.toString());
+		}
+
+		const queryString = queryParams.toString();
+		const url = queryString
+			? `/images/user/${userId}?${queryString}`
+			: `/images/user/${userId}`;
+
+		const res = await api.get(url, {
+			withCredentials: true,
+		});
+
+		if (res.data.images) {
+			return res.data;
+		}
+		return { images: res.data };
+	},
 };

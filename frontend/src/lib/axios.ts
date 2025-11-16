@@ -8,7 +8,7 @@ const api = axios.create({
 	baseURL:
 		import.meta.env.MODE ===
 		'development'
-			? 'http://localhost:5001/api'
+			? 'http://localhost:3000/api'
 			: '/api',
 	withCredentials: true,
 	timeout: 120000, // 2 minutes for file uploads (can be overridden per request)

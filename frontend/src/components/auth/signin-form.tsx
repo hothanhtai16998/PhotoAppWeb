@@ -2,12 +2,14 @@ import { cn } from "../../lib/utils"
 
 import { Card, CardContent } from "@/components/ui/card"
 
-import { Link, useNavigate } from "react-router"
+import { Link, useNavigate, useSearchParams } from "react-router"
 import { Label } from "../ui/label"
 import { Input } from "../ui/input"
 import { Button } from "../ui/button"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
+import { useEffect } from "react"
+import { toast } from "sonner"
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useAuthStore } from "@/stores/useAuthStore"
@@ -26,10 +28,22 @@ export function SigninForm({
     const { signIn } = useAuthStore();
 
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignInFormValue>({
         resolver: zodResolver(signInSchema),
     })
+
+    // Handle error query parameter from Facebook OAuth
+    useEffect(() => {
+        const error = searchParams.get('error');
+        if (error) {
+            toast.error(decodeURIComponent(error));
+            // Remove error from URL
+            searchParams.delete('error');
+            setSearchParams(searchParams, { replace: true });
+        }
+    }, [searchParams, setSearchParams]);
 
     const onSubmit = async (data: SignInFormValue) => {
         try {
@@ -45,11 +59,22 @@ export function SigninForm({
             await signIn(username, password);
             // Only navigate on success (signIn throws on error)
             navigate("/");
-        } catch (error) {
+        } catch {
             // Error is already handled by signIn in the store
             // Don't navigate on error
         }
     }
+
+    const handleSocialLogin = (provider: string) => {
+        if (provider === 'google') {
+            // Google OAuth - redirect to backend
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+            window.location.href = `${apiUrl}/api/auth/google`;
+        } else {
+            // For other providers, show coming soon message
+            alert(`${provider.charAt(0).toUpperCase() + provider.slice(1)} login is coming soon!`);
+        }
+    };
 
     return (
         <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -66,6 +91,28 @@ export function SigninForm({
                                 <p className="text-muted-foreground text-balance">
                                     Đăng nhập tài khoản PhotoApp của bạn
                                 </p>
+                            </div>
+
+                            {/* Social Login Buttons */}
+                            <div className="flex gap-3 justify-center">
+                                <button
+                                    type="button"
+                                    className="flex items-center justify-center w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-50 transition-colors"
+                                    onClick={() => handleSocialLogin('google')}
+                                    title="Sign in with Google"
+                                >
+                                    <span className="text-blue-600 font-semibold">G</span>
+                                </button>
+                            </div>
+
+                            {/* Separator */}
+                            <div className="relative">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-gray-300"></div>
+                                </div>
+                                <div className="relative flex justify-center text-xs uppercase">
+                                    <span className="bg-white px-2 text-muted-foreground">Hoặc</span>
+                                </div>
                             </div>
 
                             {/** Tên tài khoản */}

@@ -6,6 +6,7 @@ export interface User {
 	avatarUrl?: string;
 	bio?: string;
 	phone?: string;
+	isOAuthUser?: boolean;
 	createdAt?: string;
 	updatedAt?: string;
 }

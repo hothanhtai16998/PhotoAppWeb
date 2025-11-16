@@ -1,466 +1,224 @@
-import { useEffect, useState, useRef } from "react";
-import { useForm } from 'react-hook-form';
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { imageService } from "@/services/imageService";
 import Header from "@/components/Header";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2 } from "lucide-react";
-import { userService } from "@/services/userService";
-import { toast } from "sonner";
+import { Edit2, Star, XCircle } from "lucide-react";
+import type { Image } from "@/types/image";
 import "./ProfilePage.css";
 
-type ProfileFormData = {
-    firstName: string;
-    lastName: string;
-    email: string;
-    username: string;
-    location: string;
-    personalSite: string;
-    bio: string;
-    interests: string;
-    instagram: string;
-    twitter: string;
-    paypalEmail: string;
-    showMessageButton: boolean;
-};
-
-// Change password form schema
-const changePasswordSchema = z.object({
-    password: z.string().min(1, { message: "Current password is required" }),
-    newPassword: z.string().min(8, { message: "Password must be at least 8 characters" }),
-    newPasswordMatch: z.string().min(1, { message: "Password confirmation is required" }),
-}).refine((data) => data.newPassword === data.newPasswordMatch, {
-    message: "Passwords do not match",
-    path: ["newPasswordMatch"],
-});
-
-type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
+type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
 
 function ProfilePage() {
-    const { user, fetchMe } = useAuthStore();
+    const { user } = useAuthStore();
     const navigate = useNavigate();
-    const [activeSection, setActiveSection] = useState('edit-profile');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [passwordError, setPasswordError] = useState<string | null>(null);
-    const [passwordSuccess, setPasswordSuccess] = useState(false);
-    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-    const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
-    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [activeTab, setActiveTab] = useState<TabType>('photos');
+    const [images, setImages] = useState<Image[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [photosCount, setPhotosCount] = useState(0);
+    const [illustrationsCount, setIllustrationsCount] = useState(0);
+    const [collectionsCount] = useState(1); // Placeholder
 
-    // Split displayName into firstName and lastName
-    const nameParts = user?.displayName?.split(' ') || [];
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
+    const fetchUserImages = useCallback(async () => {
+        if (!user?._id) return;
 
-    const { register, handleSubmit, setValue, watch } = useForm<ProfileFormData>({
-        defaultValues: {
-            firstName,
-            lastName,
-            email: user?.email || '',
-            username: user?.username || '',
-            location: '',
-            personalSite: 'https://',
-            bio: user?.bio || '',
-            interests: '',
-            instagram: '',
-            twitter: '',
-            paypalEmail: '',
-            showMessageButton: true,
+        try {
+            setLoading(true);
+            const response = await imageService.fetchUserImages(user._id);
+            const userImages = response.images || [];
+            setImages(userImages);
+
+            // Count photos and illustrations
+            const photos = userImages.filter(img =>
+                img.imageCategory &&
+                !img.imageCategory.toLowerCase().includes('illustration') &&
+                !img.imageCategory.toLowerCase().includes('svg')
+            );
+            const illustrations = userImages.filter(img =>
+                img.imageCategory &&
+                (img.imageCategory.toLowerCase().includes('illustration') ||
+                    img.imageCategory.toLowerCase().includes('svg'))
+            );
+
+            setPhotosCount(photos.length);
+            setIllustrationsCount(illustrations.length);
+        } catch (error) {
+            console.error('Failed to fetch user images:', error);
+        } finally {
+            setLoading(false);
         }
-    });
-
-    const bioText = watch('bio') || '';
-    const bioCharCount = 250 - bioText.length;
+    }, [user]);
 
     useEffect(() => {
-        if (!user) {
+        if (!user?._id) {
             navigate('/signin');
             return;
         }
-        // Set form values when user data is available
-        if (user) {
-            const nameParts = user.displayName?.split(' ') || [];
-            setValue('firstName', nameParts[0] || '');
-            setValue('lastName', nameParts.slice(1).join(' ') || '');
-            setValue('email', user.email || '');
-            setValue('username', user.username || '');
-            setValue('bio', user.bio || '');
-        }
-    }, [user, navigate, setValue]);
 
-    // Change password form
-    const {
-        register: registerPassword,
-        handleSubmit: handlePasswordSubmit,
-        formState: { errors: passwordErrors },
-        reset: resetPasswordForm
-    } = useForm<ChangePasswordFormData>({
-        resolver: zodResolver(changePasswordSchema),
-    });
+        fetchUserImages();
+    }, [user, navigate, fetchUserImages]);
 
-    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            // Validate file type
-            if (!file.type.startsWith('image/')) {
-                toast.error('Please select an image file');
-                return;
-            }
-
-            // Validate file size (10MB)
-            if (file.size > 10 * 1024 * 1024) {
-                toast.error('Image size must be less than 10MB');
-                return;
-            }
-
-            setSelectedAvatar(file);
-
-            // Create preview
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setAvatarPreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
+    const handleEditProfile = () => {
+        navigate('/profile/edit');
     };
 
-    const handleAvatarButtonClick = () => {
-        fileInputRef.current?.click();
+    const handleEditPins = () => {
+        // TODO: Implement edit pins functionality
+        console.log('Edit pins clicked');
     };
 
-    const onSubmit = async (data: ProfileFormData) => {
-        setIsSubmitting(true);
-        setIsUploadingAvatar(!!selectedAvatar);
-
-        try {
-            const formData = new FormData();
-
-            // Add text fields
-            formData.append('firstName', data.firstName);
-            formData.append('lastName', data.lastName);
-            formData.append('email', data.email);
-            if (data.bio) {
-                formData.append('bio', data.bio);
-            }
-
-            // Add avatar if selected
-            if (selectedAvatar) {
-                formData.append('avatar', selectedAvatar);
-            }
-
-            await userService.updateProfile(formData);
-
-            // Refresh user data
-            await fetchMe();
-
-            // Clear avatar preview and selection
-            setAvatarPreview(null);
-            setSelectedAvatar(null);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-
-            toast.success('Profile updated successfully');
-        } catch (error: unknown) {
-            const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to update profile. Please try again.";
-            toast.error(errorMessage);
-        } finally {
-            setIsSubmitting(false);
-            setIsUploadingAvatar(false);
-        }
-    };
-
-    const onPasswordSubmit = async (data: ChangePasswordFormData) => {
-        setIsSubmitting(true);
-        setPasswordError(null);
-        setPasswordSuccess(false);
-
-        try {
-            await userService.changePassword(
-                data.password,
-                data.newPassword,
-                data.newPasswordMatch
-            );
-            setPasswordSuccess(true);
-            resetPasswordForm();
-            // Clear success message after 3 seconds
-            setTimeout(() => setPasswordSuccess(false), 3000);
-        } catch (error: unknown) {
-            const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to change password. Please try again.";
-            setPasswordError(errorMessage);
-        } finally {
-            setIsSubmitting(false);
-        }
+    const handleUpdateAvailability = () => {
+        // TODO: Implement availability update
+        console.log('Update availability clicked');
     };
 
     if (!user) {
         return null;
     }
 
-    const menuItems = [
-        { id: 'edit-profile', label: 'Edit profile' },
-        { id: 'hiring', label: 'Hiring' },
-        { id: 'download-history', label: 'Download history' },
-        { id: 'email-settings', label: 'Email settings' },
-        { id: 'change-password', label: 'Change password' },
-        { id: 'applications', label: 'Applications' },
-        { id: 'close-account', label: 'Close account' },
-    ];
+    const displayImages = activeTab === 'photos'
+        ? images.filter(img =>
+            img.imageCategory &&
+            !img.imageCategory.toLowerCase().includes('illustration') &&
+            !img.imageCategory.toLowerCase().includes('svg')
+        )
+        : activeTab === 'illustrations'
+            ? images.filter(img =>
+                img.imageCategory &&
+                (img.imageCategory.toLowerCase().includes('illustration') ||
+                    img.imageCategory.toLowerCase().includes('svg'))
+            )
+            : [];
 
     return (
         <>
             <Header />
-            <main className="profile-settings-page">
-                <div className="profile-settings-container">
-                    {/* Left Sidebar */}
-                    <aside className="profile-sidebar">
-                        <h2 className="sidebar-title">Account settings</h2>
-                        <nav className="sidebar-nav">
-                            {menuItems.map((item) => (
-                                <button
-                                    key={item.id}
-                                    onClick={() => setActiveSection(item.id)}
-                                    className={`sidebar-link ${activeSection === item.id ? 'active' : ''}`}
-                                >
-                                    {item.label}
-                                </button>
-                            ))}
-                        </nav>
-                    </aside>
-
-                    {/* Right Main Content */}
-                    <div className="profile-main-content">
-                        {activeSection === 'edit-profile' && (
-                            <form onSubmit={handleSubmit(onSubmit)} className="profile-form">
-                                <h1 className="form-title">Edit profile</h1>
-
-                                {/* Profile Image Section */}
-                                <div className="profile-image-section">
-                                    <div className="profile-image-container">
-                                        <div className="profile-image-wrapper">
-                                            {avatarPreview ? (
-                                                <img src={avatarPreview} alt="Preview" className="profile-image" />
-                                            ) : user.avatarUrl ? (
-                                                <img src={user.avatarUrl} alt={user.displayName} className="profile-image" />
-                                            ) : (
-                                                <div className="profile-image-placeholder">
-                                                    {user.displayName?.charAt(0).toUpperCase() || user.username?.charAt(0).toUpperCase()}
-                                                </div>
-                                            )}
-                                            {isUploadingAvatar && (
-                                                <div className="image-upload-overlay">
-                                                    <div className="upload-spinner"></div>
-                                                    <p className="upload-text">Uploading...</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handleAvatarChange}
-                                            style={{ display: 'none' }}
-                                        />
-                                        <button type="button" className="change-image-btn" onClick={handleAvatarButtonClick} disabled={isUploadingAvatar}>
-                                            Change profile image
-                                        </button>
-                                    </div>
-
-                                    <div className="profile-basic-info">
-                                        <div className="form-row">
-                                            <div className="form-field">
-                                                <Label htmlFor="firstName">First name</Label>
-                                                <Input id="firstName" {...register('firstName')} />
-                                            </div>
-                                            <div className="form-field">
-                                                <Label htmlFor="lastName">Last name</Label>
-                                                <Input id="lastName" {...register('lastName')} />
-                                                <div className="account-badge">
-                                                    <CheckCircle2 size={16} />
-                                                    <span>Account Confirmed</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="form-field">
-                                            <Label htmlFor="email">Email</Label>
-                                            <Input id="email" type="email" {...register('email')} />
-                                        </div>
-                                        <div className="form-field">
-                                            <Label htmlFor="username">Username</Label>
-                                            <Input id="username" {...register('username')} readOnly />
-                                            <p className="field-hint">(only letters, numbers, and underscores)</p>
-                                            <p className="field-url">https://photoapp.com/@{watch('username') || user.username}</p>
-                                        </div>
-                                    </div>
+            <main className="profile-page">
+                <div className="profile-container">
+                    {/* Profile Header */}
+                    <div className="profile-header">
+                        <div className="profile-avatar-container">
+                            {user.avatarUrl ? (
+                                <img
+                                    src={user.avatarUrl}
+                                    alt={user.displayName || user.username}
+                                    className="profile-avatar"
+                                />
+                            ) : (
+                                <div className="profile-avatar-placeholder">
+                                    {(user.displayName || user.username)?.charAt(0).toUpperCase()}
                                 </div>
-
-                                {/* Badge Section */}
-                                <div className="form-section">
-                                    <h3 className="section-title">Badge</h3>
-                                    <p className="empty-badge-message">You don't have any badges yet :(</p>
-                                </div>
-
-                                {/* About Section */}
-                                <div className="form-section">
-                                    <h3 className="section-title">About</h3>
-                                    <div className="form-field">
-                                        <Label htmlFor="location">Location</Label>
-                                        <Input id="location" {...register('location')} placeholder="e.g., New York, USA" />
-                                    </div>
-                                    <div className="form-field">
-                                        <Label htmlFor="personalSite">Personal site/portfolio</Label>
-                                        <Input id="personalSite" {...register('personalSite')} placeholder="https://" />
-                                    </div>
-                                    <div className="form-field">
-                                        <Label htmlFor="bio">Bio</Label>
-                                        <textarea
-                                            id="bio"
-                                            {...register('bio')}
-                                            className="bio-textarea"
-                                            maxLength={250}
-                                            placeholder="Tell us about yourself..."
-                                        />
-                                        <div className="char-counter">{bioCharCount}</div>
-                                    </div>
-                                    <div className="form-field">
-                                        <Label htmlFor="interests">Interests (maximum 5)</Label>
-                                        <Input id="interests" {...register('interests')} placeholder="add a tag" />
-                                        <p className="field-hint">Your interests are generated from the types of photos you like, collect, and contribute.</p>
-                                    </div>
-                                </div>
-
-                                {/* Social Section */}
-                                <div className="form-section">
-                                    <h3 className="section-title">Social</h3>
-                                    <div className="form-row">
-                                        <div className="form-field">
-                                            <Label htmlFor="instagram">Instagram username</Label>
-                                            <div className="input-with-prefix">
-                                                <span className="input-prefix">@</span>
-                                                <Input id="instagram" {...register('instagram')} placeholder="username" />
-                                            </div>
-                                            <p className="field-hint">So that we can feature you on @photoapp</p>
-                                        </div>
-                                        <div className="form-field">
-                                            <Label htmlFor="twitter">X (Twitter) username</Label>
-                                            <div className="input-with-prefix">
-                                                <span className="input-prefix">@</span>
-                                                <Input id="twitter" {...register('twitter')} placeholder="username" />
-                                            </div>
-                                            <p className="field-hint">So that we can feature you on @photoapp</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Donations Section */}
-                                <div className="form-section">
-                                    <h3 className="section-title">Donations</h3>
-                                    <div className="form-field">
-                                        <Label htmlFor="paypalEmail">PayPal email or username for donations</Label>
-                                        <Input id="paypalEmail" type="email" {...register('paypalEmail')} placeholder="name@domain.com" />
-                                        <p className="field-hint">Note: This email/username will be public</p>
-                                    </div>
-                                </div>
-
-                                {/* Messaging Section */}
-                                <div className="form-section">
-                                    <h3 className="section-title">Messaging</h3>
-                                    <div className="checkbox-field">
-                                        <input
-                                            type="checkbox"
-                                            id="showMessageButton"
-                                            {...register('showMessageButton')}
-                                            className="checkbox-input"
-                                        />
-                                        <Label htmlFor="showMessageButton" className="checkbox-label">
-                                            Display a 'Message' button on your profile
-                                        </Label>
-                                    </div>
-                                    <p className="field-hint">Messages will be sent to your email.</p>
-                                </div>
-
-                                {/* Submit Button */}
-                                <div className="form-actions">
-                                    <Button type="submit" disabled={isSubmitting} className="update-btn">
-                                        {isSubmitting ? 'Updating...' : 'Update account'}
-                                    </Button>
-                                </div>
-                            </form>
-                        )}
-
-                        {activeSection === 'change-password' && (
-                            <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="change-password-form">
-                                <h1 className="form-title">Change password</h1>
-
-                                <div className="form-field">
-                                    <Label htmlFor="password">Current password</Label>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        {...registerPassword('password')}
-                                        autoFocus
-                                    />
-                                    {passwordErrors.password && (
-                                        <p className="field-error">{passwordErrors.password.message}</p>
-                                    )}
-                                </div>
-
-                                <div className="form-field">
-                                    <Label htmlFor="newPassword">Password</Label>
-                                    <Input
-                                        id="newPassword"
-                                        type="password"
-                                        {...registerPassword('newPassword')}
-                                    />
-                                    {passwordErrors.newPassword && (
-                                        <p className="field-error">{passwordErrors.newPassword.message}</p>
-                                    )}
-                                </div>
-
-                                <div className="form-field">
-                                    <Label htmlFor="newPasswordMatch">Password confirmation</Label>
-                                    <Input
-                                        id="newPasswordMatch"
-                                        type="password"
-                                        {...registerPassword('newPasswordMatch')}
-                                    />
-                                    {passwordErrors.newPasswordMatch && (
-                                        <p className="field-error">{passwordErrors.newPasswordMatch.message}</p>
-                                    )}
-                                </div>
-
-                                {passwordError && (
-                                    <div className="password-error-message">
-                                        {passwordError}
-                                    </div>
-                                )}
-
-                                {passwordSuccess && (
-                                    <div className="password-success-message">
-                                        Password changed successfully!
-                                    </div>
-                                )}
-
-                                <div className="form-actions">
+                            )}
+                        </div>
+                        <div className="profile-info">
+                            <div className="profile-name-section">
+                                <h1 className="profile-name">{user.displayName || user.username}</h1>
+                                <div className="profile-actions">
                                     <Button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className="update-btn"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleEditProfile}
+                                        className="edit-profile-btn"
                                     >
-                                        {isSubmitting ? 'Changing...' : 'Change password'}
+                                        <Edit2 size={16} />
+                                        Edit profile
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleEditPins}
+                                        className="edit-pins-btn"
+                                    >
+                                        <Star size={16} />
+                                        Edit pins
                                     </Button>
                                 </div>
-                            </form>
-                        )}
+                            </div>
+                            <p className="profile-description">
+                                Download free, beautiful high-quality photos curated by {user.displayName || user.username}.
+                            </p>
+                            <div className="profile-availability">
+                                <XCircle size={16} />
+                                <span>Not available for hire</span>
+                                <button
+                                    className="availability-update-link"
+                                    onClick={handleUpdateAvailability}
+                                >
+                                    Update
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
-                        {activeSection !== 'edit-profile' && activeSection !== 'change-password' && (
+                    {/* Navigation Tabs */}
+                    <div className="profile-tabs">
+                        <button
+                            className={`profile-tab ${activeTab === 'photos' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('photos')}
+                        >
+                            <span className="tab-icon">📷</span>
+                            <span className="tab-label">Photos</span>
+                            <span className="tab-count">{photosCount}</span>
+                        </button>
+                        <button
+                            className={`profile-tab ${activeTab === 'illustrations' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('illustrations')}
+                        >
+                            <span className="tab-icon">✏️</span>
+                            <span className="tab-label">Illustrations</span>
+                            <span className="tab-count">{illustrationsCount}</span>
+                        </button>
+                        <button
+                            className={`profile-tab ${activeTab === 'collections' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('collections')}
+                        >
+                            <span className="tab-icon">📁</span>
+                            <span className="tab-label">Collections</span>
+                            <span className="tab-count">{collectionsCount}</span>
+                        </button>
+                        <button
+                            className={`profile-tab ${activeTab === 'stats' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('stats')}
+                        >
+                            <span className="tab-icon">📊</span>
+                            <span className="tab-label">Stats</span>
+                        </button>
+                    </div>
+
+                    {/* Content Area */}
+                    <div className="profile-content">
+                        {activeTab === 'photos' || activeTab === 'illustrations' ? (
+                            loading ? (
+                                <div className="loading-state">
+                                    <p>Loading images...</p>
+                                </div>
+                            ) : displayImages.length === 0 ? (
+                                <div className="empty-state">
+                                    <p>No {activeTab} yet.</p>
+                                </div>
+                            ) : (
+                                <div className="profile-image-grid">
+                                    {displayImages.map((image) => (
+                                        <div key={image._id} className="profile-image-item">
+                                            <img
+                                                src={image.imageUrl}
+                                                alt={image.imageTitle || 'Photo'}
+                                                className="profile-image"
+                                                loading="lazy"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            )
+                        ) : activeTab === 'collections' ? (
                             <div className="coming-soon">
-                                <h2>{menuItems.find(item => item.id === activeSection)?.label}</h2>
+                                <h2>Collections</h2>
+                                <p>This section is coming soon.</p>
+                            </div>
+                        ) : (
+                            <div className="coming-soon">
+                                <h2>Stats</h2>
                                 <p>This section is coming soon.</p>
                             </div>
                         )}

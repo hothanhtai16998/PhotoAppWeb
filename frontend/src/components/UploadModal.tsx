@@ -276,6 +276,111 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         );
     }
 
+    // Upload Screen (when no image selected)
+    if (!selectedFile) {
+        return (
+            <div className="upload-modal-overlay" onClick={handleCancel}>
+                <div className="upload-modal" onClick={(e) => e.stopPropagation()}>
+                    {/* Header */}
+                    <div className="upload-modal-header">
+                        <h2 className="upload-modal-title">Submit to PhotoApp</h2>
+                        <button className="upload-modal-help" onClick={() => window.open('#', '_blank')}>
+                            Need help?
+                        </button>
+                        <button className="upload-modal-close" onClick={handleCancel}>
+                            <X size={20} />
+                        </button>
+                    </div>
+
+                    {/* Upload Area */}
+                    <div className="upload-modal-content">
+                        <div
+                            className={`upload-dropzone ${dragActive ? 'drag-active' : ''}`}
+                            onDragEnter={handleDrag}
+                            onDragLeave={handleDrag}
+                            onDragOver={handleDrag}
+                            onDrop={handleDrop}
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            <div className="upload-icon-large">
+                                <Upload size={64} />
+                            </div>
+                            <div className="upload-text">
+                                <span className="upload-main-text">Upload a photo</span>
+                                <span className="upload-tag">JPEG</span>
+                            </div>
+                            <div className="upload-text">
+                                <span className="upload-main-text">or illustration</span>
+                                <span className="upload-tag">SVG</span>
+                            </div>
+                            <p className="upload-instruction">Drag and drop up to 8 images or</p>
+                            <p className="upload-browse">
+                                <button type="button" className="upload-browse-link" onClick={(e) => {
+                                    e.stopPropagation();
+                                    fileInputRef.current?.click();
+                                }}>Browse</button> to choose a file
+                            </p>
+                            <p className="upload-max-size">Max 50 MB</p>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                className="upload-file-input"
+                                multiple={false}
+                                {...imageRegister}
+                                onChange={(e) => {
+                                    imageRegister.onChange(e);
+                                    handleFileInput(e);
+                                }}
+                                ref={(e) => {
+                                    fileInputRef.current = e;
+                                    imageRegister.ref(e);
+                                }}
+                            />
+                        </div>
+
+                        {errors.image && <p className="error-text">{errors.image.message}</p>}
+
+                        {/* Guidelines */}
+                        <div className="upload-guidelines">
+                            <div className="guideline-column">
+                                <ul>
+                                    <li>High quality images (for photos, at least 5MP)</li>
+                                    <li>No AI content allowed</li>
+                                </ul>
+                            </div>
+                            <div className="guideline-column">
+                                <ul>
+                                    <li>Only upload images you <strong>own the rights</strong> to</li>
+                                    <li>Zero tolerance for nudity, violence or hate</li>
+                                </ul>
+                            </div>
+                            <div className="guideline-column">
+                                <ul>
+                                    <li>Respect the intellectual property of others</li>
+                                    <li>Read the <a href="#" className="guideline-link">PhotoApp Terms</a></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="upload-modal-footer">
+                            <a href="#" className="footer-link">Read the PhotoApp License</a>
+                            <div className="footer-buttons">
+                                <Button type="button" variant="outline" onClick={handleCancel}>
+                                    Cancel
+                                </Button>
+                                <Button type="button" disabled>
+                                    Submit to PhotoApp
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Form View (when image is selected)
     return (
         <div className="upload-modal-overlay" onClick={handleCancel}>
             <div className="upload-modal" onClick={(e) => e.stopPropagation()}>
@@ -290,83 +395,39 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                     </button>
                 </div>
 
-                {/* Upload Area */}
+                {/* Content */}
                 <div className="upload-modal-content">
-                    <div
-                        className={`upload-dropzone ${dragActive ? 'drag-active' : ''} ${selectedFile ? 'has-file' : ''}`}
-                        onDragEnter={handleDrag}
-                        onDragLeave={handleDrag}
-                        onDragOver={handleDrag}
-                        onDrop={handleDrop}
-                        onClick={() => fileInputRef.current?.click()}
-                    >
-                        {selectedFile ? (
-                            <div className="upload-preview">
-                                <img
-                                    src={URL.createObjectURL(selectedFile)}
-                                    alt="Preview"
-                                    className="upload-preview-image"
-                                />
-                                {loading && (
-                                    <div className="image-upload-overlay">
-                                        <div className="upload-spinner"></div>
-                                        <p className="upload-text">Uploading...</p>
-                                    </div>
-                                )}
-                                {!loading && (
-                                    <button
-                                        className="upload-remove-file"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedFile(null);
-                                            if (fileInputRef.current) {
-                                                fileInputRef.current.value = '';
-                                            }
-                                            setValue('image', new DataTransfer().files);
-                                        }}
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                )}
-                            </div>
-                        ) : (
-                            <>
-                                <div className="upload-icon-large">
-                                    <Upload size={48} />
+                    {/* Photo Preview */}
+                    <div className="upload-preview-container">
+                        <div className="upload-preview">
+                            <img
+                                src={URL.createObjectURL(selectedFile)}
+                                alt="Preview"
+                                className="upload-preview-image"
+                            />
+                            {loading && (
+                                <div className="image-upload-overlay">
+                                    <div className="upload-spinner"></div>
+                                    <p className="upload-text">Uploading...</p>
                                 </div>
-                                <div className="upload-text">
-                                    <span className="upload-main-text">Upload a photo</span>
-                                    <span className="upload-tag">JPEG</span>
-                                </div>
-                                <div className="upload-text">
-                                    <span className="upload-main-text">or illustration</span>
-                                    <span className="upload-tag">SVG</span>
-                                </div>
-                                <p className="upload-instruction">Drag and drop up to 10 images</p>
-                                <p className="upload-browse">
-                                    or <button type="button" className="upload-browse-link">Browse</button> to choose a file
-                                </p>
-                                <p className="upload-max-size">Max 50 MB</p>
-                            </>
-                        )}
-                        <input
-                            type="file"
-                            accept="image/*"
-                            className="upload-file-input"
-                            multiple={false}
-                            {...imageRegister}
-                            onChange={(e) => {
-                                imageRegister.onChange(e);
-                                handleFileInput(e);
-                            }}
-                            ref={(e) => {
-                                fileInputRef.current = e;
-                                imageRegister.ref(e);
-                            }}
-                        />
+                            )}
+                            {!loading && (
+                                <button
+                                    className="upload-remove-file"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedFile(null);
+                                        if (fileInputRef.current) {
+                                            fileInputRef.current.value = '';
+                                        }
+                                        setValue('image', new DataTransfer().files);
+                                    }}
+                                >
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
                     </div>
-
-                    {errors.image && <p className="error-text">{errors.image.message}</p>}
 
                     {/* Form Fields */}
                     <form onSubmit={handleSubmit(onSubmit, onError)} className="upload-form-fields">

@@ -89,7 +89,7 @@
 .upload-dropzone {
 	border: 2px dashed #d1d1d1;
 	border-radius: 8px;
-	padding: 60px 40px;
+	padding: 80px 40px;
 	text-align: center;
 	cursor: pointer;
 	transition: all 0.2s ease;
@@ -108,19 +108,16 @@
 	background: #f0f0f0;
 }
 
-.upload-dropzone.has-file {
-	padding: 0;
-	border: none;
-	background: transparent;
-}
-
 .upload-file-input {
 	display: none;
 }
 
 .upload-icon-large {
 	color: #767676;
-	margin-bottom: 16px;
+	margin-bottom: 24px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 
 .upload-text {
@@ -176,19 +173,24 @@
 	margin: 0;
 }
 
-/* Preview */
+/* Preview Container */
+.upload-preview-container {
+	margin-bottom: 32px;
+}
+
 .upload-preview {
 	position: relative;
 	width: 100%;
 	border-radius: 8px;
 	overflow: hidden;
+	background: #f5f5f5;
 }
 
 .upload-preview-image {
 	width: 100%;
 	height: auto;
 	display: block;
-	max-height: 400px;
+	max-height: 500px;
 	object-fit: contain;
 	background: #f5f5f5;
 }

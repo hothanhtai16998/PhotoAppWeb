@@ -72,6 +72,13 @@ export const changeInfo = asyncHandler(async (req, res) => {
 
     // Update email if provided
     if (email) {
+        // Prevent OAuth users from changing email (must match Google account)
+        if (currentUser.isOAuthUser) {
+            return res.status(403).json({
+                message: "Email cannot be changed for accounts using Google login. Please update your email in your Google account."
+            });
+        }
+
         // Check if email is already taken by another user
         const existingEmail = await User.findOne({
             email: email.toLowerCase().trim(),
@@ -92,6 +99,13 @@ export const changeInfo = asyncHandler(async (req, res) => {
     }
 
     // Handle avatar upload if file is provided
+    // Prevent OAuth users from changing avatar (must use Google avatar)
+    if (req.file && currentUser.isOAuthUser) {
+        return res.status(403).json({
+            message: "Avatar cannot be changed for accounts using Google login. Your avatar is managed by your Google account."
+        });
+    }
+
     if (req.file) {
         let uploadResponse;
         try {
