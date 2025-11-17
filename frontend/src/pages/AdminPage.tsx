@@ -3,21 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { adminService, type DashboardStats, type User, type AdminImage } from '@/services/adminService';
 import { categoryService, type Category } from '@/services/categoryService';
+import type { User as AuthUser } from '@/types/user';
 import Header from '@/components/Header';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     LayoutDashboard,
     Users,
     Images,
-    Trash2,
-    Edit2,
-    Search,
     Shield,
     UserCog,
     Tag
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+    AdminDashboard,
+    AdminUsers,
+    AdminImages,
+    AdminCategories,
+    AdminRoles,
+} from '@/components/admin/tabs';
 import './AdminPage.css';
 
 type TabType = 'dashboard' | 'users' | 'images' | 'categories' | 'roles';
@@ -169,7 +172,6 @@ function AdminPage() {
             toast.error(error.response?.data?.message || 'Failed to update user');
         }
     };
-
 
     const loadCategories = async () => {
         try {
@@ -332,463 +334,66 @@ function AdminPage() {
 
                     {/* Main Content */}
                     <div className="admin-content">
-                        {loading && activeTab === 'dashboard' ? (
-                            <div className="admin-loading">Đang tải...</div>
-                        ) : activeTab === 'dashboard' && stats ? (
-                            <div className="admin-dashboard">
-                                <h1 className="admin-title">Dashboard</h1>
-
-                                {/* Stats Cards */}
-                                <div className="admin-stats-grid">
-                                    <div className="admin-stat-card">
-                                        <div className="admin-stat-value">{stats.stats.totalUsers}</div>
-                                        <div className="admin-stat-label">Tổng số lượng người dùngn</div>
-                                    </div>
-                                    <div className="admin-stat-card">
-                                        <div className="admin-stat-value">{stats.stats.totalImages}</div>
-                                        <div className="admin-stat-label">Tổng số lượng ảnh</div>
-                                    </div>
-                                    <div className="admin-stat-card">
-                                        <div className="admin-stat-value">{stats.stats.categoryStats.length}</div>
-                                        <div className="admin-stat-label">Danh mục</div>
-                                    </div>
-                                </div>
-
-                                {/* Category Stats */}
-                                <div className="admin-section">
-                                    <h2 className="admin-section-title">Top Categories</h2>
-                                    <div className="admin-category-list">
-                                        {stats.stats.categoryStats.map((cat) => (
-                                            <div key={cat._id} className="admin-category-item">
-                                                <span className="admin-category-name">{cat._id}</span>
-                                                <span className="admin-category-count">{cat.count} images</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Recent Users */}
-                                <div className="admin-section">
-                                    <h2 className="admin-section-title">Người dùng được tạo gần đây</h2>
-                                    <div className="admin-table">
-                                        <table>
-                                            <thead>
-                                                <tr>
-                                                    <th>Tên tài khoản</th>
-                                                    <th>Email</th>
-                                                    <th>Họ và tên</th>
-                                                    <th>Quyền Admin</th>
-                                                    <th>Ngày tham gia</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {stats.recentUsers.map((u) => (
-                                                    <tr key={u._id}>
-                                                        <td>{u.username}</td>
-                                                        <td>{u.email}</td>
-                                                        <td>{u.displayName}</td>
-                                                        <td>
-                                                            {u.isSuperAdmin ? (
-                                                                <span className="admin-status-badge super-admin">Super Admin</span>
-                                                            ) : u.isAdmin ? (
-                                                                <span className="admin-status-badge admin">Admin</span>
-                                                            ) : (
-                                                                <span className="admin-status-badge none">No</span>
-                                                            )}
-                                                        </td>
-                                                        <td>{new Date(u.createdAt).toLocaleDateString()}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-
-                                {/* Recent Images */}
-                                <div className="admin-section">
-                                    <h2 className="admin-section-title">Ảnh được thêm gần đây</h2>
-                                    <div className="admin-table">
-                                        <table>
-                                            <thead>
-                                                <tr>
-                                                    <th>Tiêu đề</th>
-                                                    {/* <th>Ảnh thumbnail</th> */}
-                                                    <th>Danh mục</th>
-                                                    <th>Người đăng</th>
-                                                    <th>Ngày đăng</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {stats.recentImages.map((img) => (
-                                                    <tr key={img._id}>
-                                                        <td>{img.imageTitle}</td>
-                                                        {/* <td>
-                                                            <img
-                                                                src={img.imageUrl}
-                                                                alt={img.imageTitle}
-                                                            /></td> */}
-                                                        <td>
-                                                            {typeof img.imageCategory === 'string'
-                                                                ? img.imageCategory
-                                                                : img.imageCategory?.name || 'Unknown'}
-                                                        </td>
-                                                        <td>{img.uploadedBy?.displayName || img.uploadedBy?.username}</td>
-                                                        <td>{new Date(img.createdAt).toLocaleDateString()}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : activeTab === 'users' ? (
-                            <div className="admin-users">
-                                <div className="admin-header">
-                                    <h1 className="admin-title">Quản lý người dùng</h1>
-                                    <div className="admin-search">
-                                        <Search size={20} />
-                                        <Input
-                                            placeholder="Nhập tên tài khoản..."
-                                            value={usersSearch}
-                                            onChange={(e) => setUsersSearch(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    loadUsers(1);
-                                                }
-                                            }}
-                                        />
-                                        <Button onClick={() => loadUsers(1)}>Tìm</Button>
-                                    </div>
-                                </div>
-
-                                <div className="admin-table">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Tên tài khoản</th>
-                                                <th>Email</th>
-                                                <th>Họ và tên</th>
-                                                <th>Quyền Admin</th>
-                                                <th>Ảnh</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {users.map((u) => (
-                                                <tr key={u._id}>
-                                                    <td>{u.username}</td>
-                                                    <td>{u.email}</td>
-                                                    <td>{u.displayName}</td>
-                                                    <td>
-                                                        <div className="admin-status-display">
-                                                            {u.isSuperAdmin ? (
-                                                                <span className="admin-status-badge super-admin" title="Super Admin">
-                                                                    Super Admin
-                                                                </span>
-                                                            ) : u.isAdmin ? (
-                                                                <span className="admin-status-badge admin" title="Admin">
-                                                                    Admin
-                                                                </span>
-                                                            ) : (
-                                                                <span className="admin-status-badge none" title="Regular User">
-                                                                    No
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td>{u.imageCount || 0}</td>
-                                                    <td>
-                                                        <div className="admin-actions">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => setEditingUser(u)}
-                                                                disabled={u.isSuperAdmin && !user?.isSuperAdmin}
-                                                                title={u.isSuperAdmin && !user?.isSuperAdmin ? 'Cannot edit super admin' : ''}
-                                                            >
-                                                                <Edit2 size={16} />
-                                                            </Button>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleDeleteUser(u._id, u.username)}
-                                                                disabled={u._id === user?._id || (u.isSuperAdmin && !user?.isSuperAdmin)}
-                                                                title={u.isSuperAdmin && !user?.isSuperAdmin ? 'Cannot delete super admin' : u._id === user?._id ? 'Cannot delete yourself' : ''}
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </Button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {usersPagination.pages > 1 && (
-                                    <div className="admin-pagination">
-                                        <Button
-                                            disabled={usersPagination.page === 1}
-                                            onClick={() => loadUsers(usersPagination.page - 1)}
-                                        >
-                                            Quay lại
-                                        </Button>
-                                        <span>
-                                            Trang {usersPagination.page} trên {usersPagination.pages}
-                                        </span>
-                                        <Button
-                                            disabled={usersPagination.page === usersPagination.pages}
-                                            onClick={() => loadUsers(usersPagination.page + 1)}
-                                        >
-                                            Tiếp theo
-                                        </Button>
-                                    </div>
-                                )}
-
-                                {editingUser && (
-                                    <UserEditModal
-                                        user={editingUser}
-                                        onClose={() => setEditingUser(null)}
-                                        onSave={handleUpdateUser}
-                                    />
-                                )}
-                            </div>
-                        ) : activeTab === 'images' ? (
-                            <div className="admin-images">
-                                <div className="admin-header">
-                                    <h1 className="admin-title">Quản lý hình ảnh</h1>
-                                    <div className="admin-search">
-                                        <Search size={20} />
-                                        <Input
-                                            placeholder="Nhập tên ảnh..."
-                                            value={imagesSearch}
-                                            onChange={(e) => setImagesSearch(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    loadImages(1);
-                                                }
-                                            }}
-                                        />
-                                        <Button onClick={() => loadImages(1)}>Tìm</Button>
-                                    </div>
-                                </div>
-
-                                <div className="admin-images-grid">
-                                    {images.map((img) => (
-                                        <div key={img._id} className="admin-image-card">
-                                            <img src={img.imageUrl} alt={img.imageTitle} />
-                                            <div className="admin-image-info">
-                                                <h3>{img.imageTitle}</h3>
-                                                <p>Danh mục: {typeof img.imageCategory === 'string'
-                                                    ? img.imageCategory
-                                                    : img.imageCategory?.name || 'Unknown'}</p>
-                                                <p>Người đăng: {img.uploadedBy.displayName || img.uploadedBy.username}</p>
-                                                <p>Ngày đăng: {img.createdAt}</p>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleDeleteImage(img._id, img.imageTitle)}
-                                                >
-                                                    <Trash2 size={16} /> Xoá
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {imagesPagination.pages > 1 && (
-                                    <div className="admin-pagination">
-                                        <Button
-                                            disabled={imagesPagination.page === 1}
-                                            onClick={() => loadImages(imagesPagination.page - 1)}
-                                        >
-                                            Quay lại
-                                        </Button>
-                                        <span>
-                                            Trang {imagesPagination.page} trên {imagesPagination.pages}
-                                        </span>
-                                        <Button
-                                            disabled={imagesPagination.page === imagesPagination.pages}
-                                            onClick={() => loadImages(imagesPagination.page + 1)}
-                                        >
-                                            Tiếp theo
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                        ) : activeTab === 'categories' ? (
-                            <div className="admin-categories">
-                                <div className="admin-header">
-                                    <h1 className="admin-title">Quản lý danh mục</h1>
-                                    <Button onClick={() => setCreatingCategory(true)}>
-                                        + Thêm danh mục
-                                    </Button>
-                                </div>
-
-                                <div className="admin-table">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Tên</th>
-                                                <th>Mô tả</th>
-                                                <th>Số lượng ảnh hiện tại</th>
-                                                <th>Trạng thái</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {categories.map((cat) => (
-                                                <tr key={cat._id}>
-                                                    <td><strong>{cat.name}</strong></td>
-                                                    <td>{cat.description || '-'}</td>
-                                                    <td>{cat.imageCount || 0}</td>
-                                                    <td>
-                                                        <span className={`admin-status-badge ${cat.isActive ? 'admin' : 'none'}`}>
-                                                            {cat.isActive ? 'Đang kích hoạt' : 'Inactive'}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <div className="admin-actions">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => setEditingCategory(cat)}
-                                                            >
-                                                                <Edit2 size={16} />
-                                                            </Button>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleDeleteCategory(cat._id, cat.name)}
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </Button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {categories.length === 0 && (
-                                    <div className="admin-empty-state">
-                                        <p>Không tìm thấy danh mục. Vui lòng tạo mới.</p>
-                                    </div>
-                                )}
-
-                                {creatingCategory && (
-                                    <CreateCategoryModal
-                                        onClose={() => setCreatingCategory(false)}
-                                        onSave={handleCreateCategory}
-                                    />
-                                )}
-
-                                {editingCategory && (
-                                    <EditCategoryModal
-                                        category={editingCategory}
-                                        onClose={() => setEditingCategory(null)}
-                                        onSave={handleUpdateCategory}
-                                    />
-                                )}
-                            </div>
-                        ) : activeTab === 'roles' && user?.isSuperAdmin ? (
-                            <div className="admin-roles">
-                                <div className="admin-header">
-                                    <h1 className="admin-title">Quyền quản trị Admin</h1>
-                                    <Button onClick={() => setCreatingRole(true)}>
-                                        + Thêm quyền Admin
-                                    </Button>
-                                </div>
-
-                                <div className="admin-table">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Tên tài khoản</th>
-                                                <th>Vai trò</th>
-                                                <th>Quyền hạn</th>
-                                                <th>Người cấp</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {adminRoles.map((role) => (
-                                                <tr key={role._id}>
-                                                    <td>
-                                                        <div>
-                                                            <strong>{role.userId?.displayName || role.userId?.username}</strong>
-                                                            <br />
-                                                            <small>{role.userId?.email}</small>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <span className={`admin-role-badge ${role.role}`}>
-                                                            {role.role === 'super_admin' ? 'Super Admin' : role.role === 'admin' ? 'Admin' : 'Moderator'}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <div className="admin-permissions-list">
-                                                            {Object.entries(role.permissions || {}).map(([key, value]) =>
-                                                                value ? (
-                                                                    <span key={key} className="admin-permission-tag">
-                                                                        {key}
-                                                                    </span>
-                                                                ) : null
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        {role.grantedBy?.displayName || role.grantedBy?.username || 'System'}
-                                                    </td>
-                                                    <td>
-                                                        <div className="admin-actions">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => setEditingRole(role)}
-                                                            >
-                                                                <Edit2 size={16} />
-                                                            </Button>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleDeleteRole(role.userId._id, role.userId.username)}
-                                                                disabled={role.userId._id === user?._id}
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </Button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {adminRoles.length === 0 && (
-                                    <div className="admin-empty-state">
-                                        <p>Chưa có quyền admin. Vui lòng tạo mới</p>
-                                    </div>
-                                )}
-
-                                {creatingRole && (
-                                    <CreateRoleModal
-                                        users={users}
-                                        onClose={() => setCreatingRole(false)}
-                                        onSave={handleCreateRole}
-                                    />
-                                )}
-
-                                {editingRole && (
-                                    <EditRoleModal
-                                        role={editingRole}
-                                        onClose={() => setEditingRole(null)}
-                                        onSave={handleUpdateRole}
-                                    />
-                                )}
-                            </div>
-                        ) : null}
+                        {activeTab === 'dashboard' && (
+                            <AdminDashboard stats={stats} loading={loading} />
+                        )}
+                        {activeTab === 'users' && (
+                            <AdminUsers
+                                users={users}
+                                pagination={usersPagination}
+                                search={usersSearch}
+                                currentUser={user as AuthUser | null}
+                                onSearchChange={setUsersSearch}
+                                onSearch={() => loadUsers(1)}
+                                onPageChange={loadUsers}
+                                onEdit={setEditingUser}
+                                onDelete={handleDeleteUser}
+                                editingUser={editingUser}
+                                onCloseEdit={() => setEditingUser(null)}
+                                onSaveEdit={handleUpdateUser}
+                            />
+                        )}
+                        {activeTab === 'images' && (
+                            <AdminImages
+                                images={images}
+                                pagination={imagesPagination}
+                                search={imagesSearch}
+                                onSearchChange={setImagesSearch}
+                                onSearch={() => loadImages(1)}
+                                onPageChange={loadImages}
+                                onDelete={handleDeleteImage}
+                            />
+                        )}
+                        {activeTab === 'categories' && (
+                            <AdminCategories
+                                categories={categories}
+                                creatingCategory={creatingCategory}
+                                editingCategory={editingCategory}
+                                onCreateClick={() => setCreatingCategory(true)}
+                                onEdit={setEditingCategory}
+                                onDelete={handleDeleteCategory}
+                                onCloseCreate={() => setCreatingCategory(false)}
+                                onCloseEdit={() => setEditingCategory(null)}
+                                onSaveCreate={handleCreateCategory}
+                                onSaveEdit={handleUpdateCategory}
+                            />
+                        )}
+                        {activeTab === 'roles' && user?.isSuperAdmin && (
+                            <AdminRoles
+                                roles={adminRoles}
+                                users={users}
+                                currentUser={user as AuthUser | null}
+                                creatingRole={creatingRole}
+                                editingRole={editingRole}
+                                onCreateClick={() => setCreatingRole(true)}
+                                onEdit={setEditingRole}
+                                onDelete={handleDeleteRole}
+                                onCloseCreate={() => setCreatingRole(false)}
+                                onCloseEdit={() => setEditingRole(null)}
+                                onSaveCreate={handleCreateRole}
+                                onSaveEdit={handleUpdateRole}
+                            />
+                        )}
                     </div>
                 </div>
             </div>
@@ -796,375 +401,4 @@ function AdminPage() {
     );
 }
 
-// User Edit Modal Component
-function UserEditModal({
-    user,
-    onClose,
-    onSave,
-}: {
-    user: User;
-    onClose: () => void;
-    onSave: (userId: string, updates: Partial<User>) => Promise<void>;
-}) {
-    const [displayName, setDisplayName] = useState(user.displayName);
-    const [email, setEmail] = useState(user.email);
-    const [bio, setBio] = useState(user.bio || '');
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        await onSave(user._id, { displayName, email, bio });
-    };
-
-    return (
-        <div className="admin-modal-overlay" onClick={onClose}>
-            <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="admin-modal-header">
-                    <h2>Chỉnh sửa thông tin</h2>
-                    <button onClick={onClose}>×</button>
-                </div>
-                <form onSubmit={handleSubmit} className="admin-modal-form">
-                    <div className="admin-form-group">
-                        <label>Họ và tên</label>
-                        <Input
-                            value={displayName}
-                            onChange={(e) => setDisplayName(e.target.value)}
-                            required
-                        />
-                    </div>
-                    <div className="admin-form-group">
-                        <label>Email</label>
-                        <Input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
-                    </div>
-                    <div className="admin-form-group">
-                        <label>Bio</label>
-                        <textarea
-                            value={bio}
-                            onChange={(e) => setBio(e.target.value)}
-                            rows={3}
-                        />
-                    </div>
-                    <div className="admin-modal-actions">
-                        <Button type="button" variant="outline" onClick={onClose}>
-                            Huỷ
-                        </Button>
-                        <Button type="submit">Lưu</Button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
-
-// Create Role Modal Component
-function CreateRoleModal({
-    users,
-    onClose,
-    onSave,
-}: {
-    users: User[];
-    onClose: () => void;
-    onSave: (data: { userId: string; role: string; permissions: any }) => Promise<void>;
-}) {
-    const [selectedUserId, setSelectedUserId] = useState('');
-    const [role, setRole] = useState('admin');
-    const [permissions, setPermissions] = useState({
-        manageUsers: false,
-        deleteUsers: false,
-        manageImages: false,
-        deleteImages: false,
-        manageCategories: false,
-        manageAdmins: false,
-        viewDashboard: true,
-    });
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedUserId) {
-            toast.error('Vui lòng chọn tài khoản để tạo quyền admin.');
-            return;
-        }
-        await onSave({ userId: selectedUserId, role, permissions });
-    };
-
-    return (
-        <div className="admin-modal-overlay" onClick={onClose}>
-            <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="admin-modal-header">
-                    <h2>Thêm quyền admin</h2>
-                    <button onClick={onClose}>×</button>
-                </div>
-                <form onSubmit={handleSubmit} className="admin-modal-form">
-                    <div className="admin-form-group">
-                        <label>Chọn tài khoản</label>
-                        <select
-                            value={selectedUserId}
-                            onChange={(e) => setSelectedUserId(e.target.value)}
-                            required
-                            className="admin-select"
-                        >
-                            <option value="">Vui lòng chọn tải khoản...</option>
-                            {users.filter(u => !u.isAdmin && !u.isSuperAdmin).map((u) => (
-                                <option key={u._id} value={u._id}>
-                                    {u.displayName} ({u.username})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="admin-form-group">
-                        <label>Vai trò</label>
-                        <select
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                            className="admin-select"
-                        >
-                            <option value="admin">Admin</option>
-                            <option value="moderator">Mod</option>
-                        </select>
-                    </div>
-
-                    <div className="admin-form-group">
-                        <label>Quyền hạn</label>
-                        <div className="admin-permissions-checkboxes">
-                            {Object.entries(permissions).map(([key, value]) => (
-                                <label key={key} className="admin-checkbox-label">
-                                    <input
-                                        type="checkbox"
-                                        checked={value as boolean}
-                                        onChange={(e) => setPermissions({ ...permissions, [key]: e.target.checked })}
-                                        disabled={key === 'viewDashboard'}
-                                    />
-                                    <span>{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="admin-modal-actions">
-                        <Button type="button" variant="outline" onClick={onClose}>
-                            Huỷ
-                        </Button>
-                        <Button type="submit">Thêm</Button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
-
-// Edit Role Modal Component
-function EditRoleModal({
-    role,
-    onClose,
-    onSave,
-}: {
-    role: any;
-    onClose: () => void;
-    onSave: (userId: string, updates: { role?: string; permissions?: any }) => Promise<void>;
-}) {
-    const [selectedRole, setSelectedRole] = useState(role.role);
-    const [permissions, setPermissions] = useState(role.permissions || {});
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        await onSave(role.userId._id || role.userId, { role: selectedRole, permissions });
-    };
-
-    return (
-        <div className="admin-modal-overlay" onClick={onClose}>
-            <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="admin-modal-header">
-                    <h2>Sửa quyền admin</h2>
-                    <button onClick={onClose}>×</button>
-                </div>
-                <form onSubmit={handleSubmit} className="admin-modal-form">
-                    <div className="admin-form-group">
-                        <label>Tài khoản admin</label>
-                        <Input
-                            value={role.userId?.displayName || role.userId?.username || ''}
-                            disabled
-                        />
-                    </div>
-
-                    <div className="admin-form-group">
-                        <label>Vai trò</label>
-                        <select
-                            value={selectedRole}
-                            onChange={(e) => setSelectedRole(e.target.value)}
-                            className="admin-select"
-                        >
-                            <option value="admin">Admin</option>
-                            <option value="moderator">Mod</option>
-                        </select>
-                    </div>
-
-                    <div className="admin-form-group">
-                        <label>Quyền hạn</label>
-                        <div className="admin-permissions-checkboxes">
-                            {Object.entries(permissions).map(([key]) => (
-                                <label key={key} className="admin-checkbox-label">
-                                    <input
-                                        type="checkbox"
-                                        checked={permissions[key] || false}
-                                        onChange={(e) => setPermissions({ ...permissions, [key]: e.target.checked })}
-                                        disabled={key === 'viewDashboard'}
-                                    />
-                                    <span>{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="admin-modal-actions">
-                        <Button type="button" variant="outline" onClick={onClose}>
-                            Huỷ
-                        </Button>
-                        <Button type="submit">Lưu</Button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
-
-// Create Category Modal Component
-function CreateCategoryModal({
-    onClose,
-    onSave,
-}: {
-    onClose: () => void;
-    onSave: (data: { name: string; description?: string }) => Promise<void>;
-}) {
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!name.trim()) {
-            toast.error('Category name is required');
-            return;
-        }
-        await onSave({ name: name.trim(), description: description.trim() || undefined });
-    };
-
-    return (
-        <div className="admin-modal-overlay" onClick={onClose}>
-            <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="admin-modal-header">
-                    <h2>Thêm danh mục mới</h2>
-                    <button onClick={onClose}>×</button>
-                </div>
-                <form onSubmit={handleSubmit} className="admin-modal-form">
-                    <div className="admin-form-group">
-                        <label>Tên danh mục</label>
-                        <Input
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            required
-                            placeholder="Chân dung, phong cảnh, sự kiện,..."
-                        />
-                    </div>
-                    <div className="admin-form-group">
-                        <label>Mô tả</label>
-                        <textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            rows={3}
-                            placeholder="Thêm mô tả cho danh mục hoặc bỏ trống"
-                        />
-                    </div>
-                    <div className="admin-modal-actions">
-                        <Button type="button" variant="outline" onClick={onClose}>
-                            Huỷ
-                        </Button>
-                        <Button type="submit">Tạo</Button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
-
-// Edit Category Modal Component
-function EditCategoryModal({
-    category,
-    onClose,
-    onSave,
-}: {
-    category: Category;
-    onClose: () => void;
-    onSave: (categoryId: string, updates: { name?: string; description?: string; isActive?: boolean }) => Promise<void>;
-}) {
-    const [name, setName] = useState(category.name);
-    const [description, setDescription] = useState(category.description || '');
-    const [isActive, setIsActive] = useState(category.isActive !== false);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!name.trim()) {
-            toast.error('Cần có tên danh mục');
-            return;
-        }
-        await onSave(category._id, {
-            name: name.trim() !== category.name ? name.trim() : undefined,
-            description: description.trim() || '',
-            isActive,
-        });
-    };
-
-    return (
-        <div className="admin-modal-overlay" onClick={onClose}>
-            <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="admin-modal-header">
-                    <h2>Chỉnh sửa danh mục</h2>
-                    <button onClick={onClose}>×</button>
-                </div>
-                <form onSubmit={handleSubmit} className="admin-modal-form">
-                    <div className="admin-form-group">
-                        <label>Tên danh mục</label>
-                        <Input
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            required
-                        />
-                        <small style={{ color: '#666', marginTop: '4px', display: 'block' }}>
-                            Thay đổi tên danh mục sẽ cập nhật tất cả các ảnh đã đăng tại danh mục này.
-                        </small>
-                    </div>
-                    <div className="admin-form-group">
-                        <label>Mô tả</label>
-                        <textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            rows={3}
-                        />
-                    </div>
-                    <div className="admin-form-group">
-                        <label className="admin-checkbox-label">
-                            <input
-                                type="checkbox"
-                                checked={isActive}
-                                onChange={(e) => setIsActive(e.target.checked)}
-                            />
-                            Đang kích hoạt
-                        </label>
-                    </div>
-                    <div className="admin-modal-actions">
-                        <Button type="button" variant="outline" onClick={onClose}>
-                            Huỷ
-                        </Button>
-                        <Button type="submit">Lưu</Button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
-
 export default AdminPage;
-
