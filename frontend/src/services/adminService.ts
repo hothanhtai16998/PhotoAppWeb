@@ -17,6 +17,7 @@ export interface User {
     displayName: string;
     bio?: string;
     isAdmin: boolean;
+    isSuperAdmin?: boolean;
     createdAt: string;
     imageCount?: number;
 }
@@ -75,7 +76,6 @@ export const adminService = {
             displayName?: string;
             email?: string;
             bio?: string;
-            isAdmin?: boolean;
         }
     ): Promise<{ user: User }> => {
         const res = await api.put(`/admin/users/${userId}`, data, {
@@ -115,6 +115,51 @@ export const adminService = {
 
     deleteImage: async (imageId: string): Promise<void> => {
         await api.delete(`/admin/images/${imageId}`, {
+            withCredentials: true,
+        });
+    },
+
+    // Admin Role Management
+    getAllAdminRoles: async (): Promise<{ adminRoles: any[] }> => {
+        const res = await api.get('/admin/roles', {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    getAdminRole: async (userId: string): Promise<{ adminRole: any }> => {
+        const res = await api.get(`/admin/roles/${userId}`, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    createAdminRole: async (data: {
+        userId: string;
+        role?: string;
+        permissions?: any;
+    }): Promise<{ adminRole: any }> => {
+        const res = await api.post('/admin/roles', data, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    updateAdminRole: async (
+        userId: string,
+        data: {
+            role?: string;
+            permissions?: any;
+        }
+    ): Promise<{ adminRole: any }> => {
+        const res = await api.put(`/admin/roles/${userId}`, data, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    deleteAdminRole: async (userId: string): Promise<void> => {
+        await api.delete(`/admin/roles/${userId}`, {
             withCredentials: true,
         });
     },

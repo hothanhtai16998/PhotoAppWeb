@@ -1,8 +1,10 @@
 import User from '../models/User.js';
 import Image from '../models/Image.js';
+import AdminRole from '../models/AdminRole.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import cloudinary from '../libs/cloudinary.js';
+import { PERMISSIONS } from '../middlewares/permissionMiddleware.js';
 
 // Statistics
 export const getDashboardStats = asyncHandler(async (req, res) => {
@@ -33,6 +35,13 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
 
 // User Management
 export const getAllUsers = asyncHandler(async (req, res) => {
+    // Check permission (super admin or admin with manageUsers permission)
+    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageUsers) {
+        return res.status(403).json({
+            message: 'Permission denied: manageUsers required',
+        });
+    }
+
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
     const skip = (page - 1) * limit;
@@ -92,13 +101,27 @@ export const getUserById = asyncHandler(async (req, res) => {
 
 export const updateUser = asyncHandler(async (req, res) => {
     const { userId } = req.params;
-    const { displayName, email, bio, isAdmin } = req.body;
+    const { displayName, email, bio } = req.body;
+
+    // Check permission (super admin or admin with manageUsers permission)
+    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageUsers) {
+        return res.status(403).json({
+            message: 'Permission denied: manageUsers required',
+        });
+    }
 
     const user = await User.findById(userId);
 
     if (!user) {
         return res.status(404).json({
             message: 'User not found',
+        });
+    }
+
+    // Prevent non-super admins from updating super admin users
+    if (user.isSuperAdmin && !req.user.isSuperAdmin) {
+        return res.status(403).json({
+            message: 'Permission denied: Cannot update super admin user',
         });
     }
 
@@ -127,9 +150,8 @@ export const updateUser = asyncHandler(async (req, res) => {
         updateData.bio = bio.trim() || undefined;
     }
 
-    if (isAdmin !== undefined) {
-        updateData.isAdmin = isAdmin;
-    }
+    // isAdmin and isSuperAdmin should not be updated through this endpoint
+    // Admin roles should be managed through the AdminRole system only
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
         new: true,
@@ -145,6 +167,13 @@ export const updateUser = asyncHandler(async (req, res) => {
 export const deleteUser = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
+    // Check permission (only super admin or admin with deleteUsers permission)
+    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.deleteUsers) {
+        return res.status(403).json({
+            message: 'Permission denied: deleteUsers required',
+        });
+    }
+
     const user = await User.findById(userId);
 
     if (!user) {
@@ -157,6 +186,13 @@ export const deleteUser = asyncHandler(async (req, res) => {
     if (userId === req.user._id.toString()) {
         return res.status(400).json({
             message: 'Cannot delete your own account',
+        });
+    }
+
+    // Prevent non-super admins from deleting super admin users
+    if (user.isSuperAdmin && !req.user.isSuperAdmin) {
+        return res.status(403).json({
+            message: 'Permission denied: Cannot delete super admin user',
         });
     }
 
@@ -185,6 +221,13 @@ export const deleteUser = asyncHandler(async (req, res) => {
 
 // Image Management
 export const getAllImagesAdmin = asyncHandler(async (req, res) => {
+    // Check permission (super admin or admin with manageImages permission)
+    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageImages) {
+        return res.status(403).json({
+            message: 'Permission denied: manageImages required',
+        });
+    }
+
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
     const skip = (page - 1) * limit;
@@ -233,6 +276,13 @@ export const getAllImagesAdmin = asyncHandler(async (req, res) => {
 export const deleteImage = asyncHandler(async (req, res) => {
     const { imageId } = req.params;
 
+    // Check permission (only super admin or admin with deleteImages permission)
+    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.deleteImages) {
+        return res.status(403).json({
+            message: 'Permission denied: deleteImages required',
+        });
+    }
+
     const image = await Image.findById(imageId);
 
     if (!image) {
@@ -253,6 +303,239 @@ export const deleteImage = asyncHandler(async (req, res) => {
 
     res.status(200).json({
         message: 'Image deleted successfully',
+    });
+});
+
+// Admin Role Management (Only Super Admin)
+export const getAllAdminRoles = asyncHandler(async (req, res) => {
+    // Only super admin can view all admin roles
+    if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
+        return res.status(403).json({
+            message: 'Super admin access required',
+        });
+    }
+
+    const adminRoles = await AdminRole.find()
+        .populate('userId', 'username email displayName isSuperAdmin')
+        .populate('grantedBy', 'username displayName')
+        .sort({ createdAt: -1 })
+        .lean();
+
+    // Filter out any admin roles for super admin users (they shouldn't have AdminRole entries)
+    const filteredRoles = adminRoles.filter(role => {
+        const userId = role.userId;
+        // Handle both populated and non-populated userId
+        if (userId && typeof userId === 'object' && 'isSuperAdmin' in userId) {
+            return !userId.isSuperAdmin;
+        }
+        return true;
+    });
+
+    res.status(200).json({
+        adminRoles: filteredRoles,
+    });
+});
+
+export const getAdminRole = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+
+    // Users can view their own role, super admin can view any
+    if (userId !== req.user._id.toString() && !req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
+        return res.status(403).json({
+            message: 'Permission denied',
+        });
+    }
+
+    const adminRole = await AdminRole.findOne({ userId })
+        .populate('userId', 'username email displayName')
+        .populate('grantedBy', 'username displayName')
+        .lean();
+
+    if (!adminRole) {
+        return res.status(404).json({
+            message: 'Admin role not found',
+        });
+    }
+
+    res.status(200).json({
+        adminRole,
+    });
+});
+
+export const createAdminRole = asyncHandler(async (req, res) => {
+    // Only super admin can create admin roles
+    if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
+        return res.status(403).json({
+            message: 'Super admin access required to delegate admin roles',
+        });
+    }
+
+    const { userId, role, permissions } = req.body;
+
+    if (!userId) {
+        return res.status(400).json({
+            message: 'User ID is required',
+        });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+        return res.status(404).json({
+            message: 'User not found',
+        });
+    }
+
+    // Prevent creating admin role for super admin users
+    if (user.isSuperAdmin) {
+        return res.status(400).json({
+            message: 'Cannot create admin role for super admin user',
+        });
+    }
+
+    // Check if admin role already exists
+    const existingRole = await AdminRole.findOne({ userId });
+
+    if (existingRole) {
+        return res.status(400).json({
+            message: 'User already has an admin role',
+        });
+    }
+
+    // Set user as admin
+    user.isAdmin = true;
+    await user.save();
+
+    // Create admin role
+    const adminRole = await AdminRole.create({
+        userId,
+        role: role || 'admin',
+        permissions: permissions || {
+            manageUsers: false,
+            deleteUsers: false,
+            manageImages: false,
+            deleteImages: false,
+            manageCategories: false,
+            manageAdmins: false,
+            viewDashboard: true,
+        },
+        grantedBy: req.user._id,
+    });
+
+    await adminRole.populate('userId', 'username email displayName');
+    await adminRole.populate('grantedBy', 'username displayName');
+
+    res.status(201).json({
+        message: 'Admin role created successfully',
+        adminRole,
+    });
+});
+
+export const updateAdminRole = asyncHandler(async (req, res) => {
+    // Only super admin can update admin roles
+    if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
+        return res.status(403).json({
+            message: 'Super admin access required to update admin roles',
+        });
+    }
+
+    const { userId } = req.params;
+    const { role, permissions } = req.body;
+
+    const adminRole = await AdminRole.findOne({ userId });
+
+    if (!adminRole) {
+        return res.status(404).json({
+            message: 'Admin role not found',
+        });
+    }
+
+    // Check if user is super admin
+    const user = await User.findById(userId);
+    if (user && user.isSuperAdmin) {
+        return res.status(400).json({
+            message: 'Cannot update admin role for super admin user',
+        });
+    }
+
+    // Prevent changing your own role
+    if (userId === req.user._id.toString()) {
+        return res.status(400).json({
+            message: 'Cannot modify your own admin role',
+        });
+    }
+
+    const updateData = {};
+
+    if (role !== undefined) {
+        updateData.role = role;
+    }
+
+    if (permissions !== undefined) {
+        updateData.permissions = {
+            ...adminRole.permissions,
+            ...permissions,
+        };
+    }
+
+    const updatedRole = await AdminRole.findOneAndUpdate(
+        { userId },
+        updateData,
+        { new: true, runValidators: true }
+    )
+        .populate('userId', 'username email displayName')
+        .populate('grantedBy', 'username displayName');
+
+    res.status(200).json({
+        message: 'Admin role updated successfully',
+        adminRole: updatedRole,
+    });
+});
+
+export const deleteAdminRole = asyncHandler(async (req, res) => {
+    // Only super admin can delete admin roles
+    if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
+        return res.status(403).json({
+            message: 'Super admin access required to remove admin roles',
+        });
+    }
+
+    const { userId } = req.params;
+
+    // Prevent removing your own role
+    if (userId === req.user._id.toString()) {
+        return res.status(400).json({
+            message: 'Cannot remove your own admin role',
+        });
+    }
+
+    const adminRole = await AdminRole.findOne({ userId });
+
+    if (!adminRole) {
+        return res.status(404).json({
+            message: 'Admin role not found',
+        });
+    }
+
+    // Check if user is super admin
+    const user = await User.findById(userId);
+    if (user && user.isSuperAdmin) {
+        return res.status(400).json({
+            message: 'Cannot delete admin role for super admin user',
+        });
+    }
+
+    // Remove admin role
+    await AdminRole.findOneAndDelete({ userId });
+
+    // Update user's isAdmin status (reuse the user variable from above)
+    if (user) {
+        user.isAdmin = false;
+        await user.save();
+    }
+
+    res.status(200).json({
+        message: 'Admin role removed successfully',
     });
 });
 

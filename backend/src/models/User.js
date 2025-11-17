@@ -50,6 +50,12 @@ const userSchema = new mongoose.Schema(
             default: false,
             index: true,
         },
+        // For backward compatibility - will be determined by AdminRole
+        isSuperAdmin: {
+            type: Boolean,
+            default: false,
+            index: true,
+        },
         // location: {
         //     type: String,
         // }

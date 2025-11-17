@@ -19,7 +19,7 @@ export default function AdminRoute() {
         return <Navigate to="/signin" replace />;
     }
 
-    if (!user.isAdmin) {
+    if (!user.isAdmin && !user.isSuperAdmin) {
         return <Navigate to="/" replace />;
     }
 

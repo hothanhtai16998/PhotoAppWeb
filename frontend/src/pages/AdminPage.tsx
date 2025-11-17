@@ -13,13 +13,12 @@ import {
     Edit2, 
     Search,
     Shield,
-    X,
-    Check
+    UserCog
 } from 'lucide-react';
 import { toast } from 'sonner';
 import './AdminPage.css';
 
-type TabType = 'dashboard' | 'users' | 'images';
+type TabType = 'dashboard' | 'users' | 'images' | 'roles';
 
 function AdminPage() {
     const { user, fetchMe } = useAuthStore();
@@ -39,11 +38,17 @@ function AdminPage() {
     const [imagesPagination, setImagesPagination] = useState({ page: 1, pages: 1, total: 0 });
     const [imagesSearch, setImagesSearch] = useState('');
 
+    // Roles state
+    const [adminRoles, setAdminRoles] = useState<any[]>([]);
+    const [editingRole, setEditingRole] = useState<any | null>(null);
+    const [creatingRole, setCreatingRole] = useState(false);
+
     useEffect(() => {
         const checkAdmin = async () => {
             try {
                 await fetchMe();
-                if (!user?.isAdmin) {
+                const currentUser = useAuthStore.getState().user;
+                if (!currentUser?.isAdmin && !currentUser?.isSuperAdmin) {
                     toast.error('Admin access required');
                     navigate('/');
                     return;
@@ -63,6 +68,8 @@ function AdminPage() {
             loadUsers();
         } else if (activeTab === 'images') {
             loadImages();
+        } else if (activeTab === 'roles') {
+            loadAdminRoles();
         }
     }, [activeTab]);
 
@@ -154,11 +161,63 @@ function AdminPage() {
         }
     };
 
-    const toggleAdminStatus = async (user: User) => {
-        await handleUpdateUser(user._id, { isAdmin: !user.isAdmin });
+
+    const loadAdminRoles = async () => {
+        if (!user?.isSuperAdmin) return;
+        try {
+            setLoading(true);
+            const data = await adminService.getAllAdminRoles();
+            setAdminRoles(data.adminRoles);
+            // Also load users if not already loaded (for create role modal)
+            if (users.length === 0) {
+                await loadUsers(1);
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to load admin roles');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    if (!user?.isAdmin) {
+    const handleCreateRole = async (data: { userId: string; role: string; permissions: any }) => {
+        try {
+            await adminService.createAdminRole(data);
+            toast.success('Admin role created successfully');
+            setCreatingRole(false);
+            loadAdminRoles();
+            loadUsers(usersPagination.page);
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to create admin role');
+        }
+    };
+
+    const handleUpdateRole = async (userId: string, updates: { role?: string; permissions?: any }) => {
+        try {
+            await adminService.updateAdminRole(userId, updates);
+            toast.success('Admin role updated successfully');
+            setEditingRole(null);
+            loadAdminRoles();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to update admin role');
+        }
+    };
+
+    const handleDeleteRole = async (userId: string, username: string) => {
+        if (!confirm(`Are you sure you want to remove admin role from "${username}"?`)) {
+            return;
+        }
+
+        try {
+            await adminService.deleteAdminRole(userId);
+            toast.success('Admin role removed successfully');
+            loadAdminRoles();
+            loadUsers(usersPagination.page);
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to remove admin role');
+        }
+    };
+
+    if (!user?.isAdmin && !user?.isSuperAdmin) {
         return null;
     }
 
@@ -195,6 +254,15 @@ function AdminPage() {
                                 <Images size={20} />
                                 Images
                             </button>
+                            {user?.isSuperAdmin && (
+                                <button
+                                    className={`admin-nav-item ${activeTab === 'roles' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('roles')}
+                                >
+                                    <UserCog size={20} />
+                                    Admin Roles
+                                </button>
+                            )}
                         </nav>
                     </div>
 
@@ -255,7 +323,15 @@ function AdminPage() {
                                                         <td>{u.username}</td>
                                                         <td>{u.email}</td>
                                                         <td>{u.displayName}</td>
-                                                        <td>{u.isAdmin ? 'Yes' : 'No'}</td>
+                                                        <td>
+                                                            {u.isSuperAdmin ? (
+                                                                <span className="admin-status-badge super-admin">Super Admin</span>
+                                                            ) : u.isAdmin ? (
+                                                                <span className="admin-status-badge admin">Admin</span>
+                                                            ) : (
+                                                                <span className="admin-status-badge none">No</span>
+                                                            )}
+                                                        </td>
                                                         <td>{new Date(u.createdAt).toLocaleDateString()}</td>
                                                     </tr>
                                                 ))}
@@ -330,13 +406,21 @@ function AdminPage() {
                                                     <td>{u.email}</td>
                                                     <td>{u.displayName}</td>
                                                     <td>
-                                                        <button
-                                                            className={`admin-toggle ${u.isAdmin ? 'active' : ''}`}
-                                                            onClick={() => toggleAdminStatus(u)}
-                                                            title={u.isAdmin ? 'Remove admin' : 'Make admin'}
-                                                        >
-                                                            {u.isAdmin ? <Check size={16} /> : <X size={16} />}
-                                                        </button>
+                                                        <div className="admin-status-display">
+                                                            {u.isSuperAdmin ? (
+                                                                <span className="admin-status-badge super-admin" title="Super Admin">
+                                                                    Super Admin
+                                                                </span>
+                                                            ) : u.isAdmin ? (
+                                                                <span className="admin-status-badge admin" title="Admin">
+                                                                    Admin
+                                                                </span>
+                                                            ) : (
+                                                                <span className="admin-status-badge none" title="Regular User">
+                                                                    No
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                     <td>{u.imageCount || 0}</td>
                                                     <td>
@@ -345,6 +429,8 @@ function AdminPage() {
                                                                 variant="outline"
                                                                 size="sm"
                                                                 onClick={() => setEditingUser(u)}
+                                                                disabled={u.isSuperAdmin && !user?.isSuperAdmin}
+                                                                title={u.isSuperAdmin && !user?.isSuperAdmin ? 'Cannot edit super admin' : ''}
                                                             >
                                                                 <Edit2 size={16} />
                                                             </Button>
@@ -352,7 +438,8 @@ function AdminPage() {
                                                                 variant="outline"
                                                                 size="sm"
                                                                 onClick={() => handleDeleteUser(u._id, u.username)}
-                                                                disabled={u._id === user?._id}
+                                                                disabled={u._id === user?._id || (u.isSuperAdmin && !user?.isSuperAdmin)}
+                                                                title={u.isSuperAdmin && !user?.isSuperAdmin ? 'Cannot delete super admin' : u._id === user?._id ? 'Cannot delete yourself' : ''}
                                                             >
                                                                 <Trash2 size={16} />
                                                             </Button>
@@ -452,6 +539,102 @@ function AdminPage() {
                                     </div>
                                 )}
                             </div>
+                        ) : activeTab === 'roles' && user?.isSuperAdmin ? (
+                            <div className="admin-roles">
+                                <div className="admin-header">
+                                    <h1 className="admin-title">Admin Role Management</h1>
+                                    <Button onClick={() => setCreatingRole(true)}>
+                                        + Create Admin Role
+                                    </Button>
+                                </div>
+
+                                <div className="admin-table">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>User</th>
+                                                <th>Role</th>
+                                                <th>Permissions</th>
+                                                <th>Granted By</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {adminRoles.map((role) => (
+                                                <tr key={role._id}>
+                                                    <td>
+                                                        <div>
+                                                            <strong>{role.userId?.displayName || role.userId?.username}</strong>
+                                                            <br />
+                                                            <small>{role.userId?.email}</small>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <span className={`admin-role-badge ${role.role}`}>
+                                                            {role.role === 'super_admin' ? 'Super Admin' : role.role === 'admin' ? 'Admin' : 'Moderator'}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <div className="admin-permissions-list">
+                                                            {Object.entries(role.permissions || {}).map(([key, value]) => (
+                                                                value && (
+                                                                    <span key={key} className="admin-permission-tag">
+                                                                        {key}
+                                                                    </span>
+                                                                )
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        {role.grantedBy?.displayName || role.grantedBy?.username || 'System'}
+                                                    </td>
+                                                    <td>
+                                                        <div className="admin-actions">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => setEditingRole(role)}
+                                                            >
+                                                                <Edit2 size={16} />
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handleDeleteRole(role.userId._id, role.userId.username)}
+                                                                disabled={role.userId._id === user?._id}
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {adminRoles.length === 0 && (
+                                    <div className="admin-empty-state">
+                                        <p>No admin roles found. Create one to delegate admin permissions.</p>
+                                    </div>
+                                )}
+
+                                {creatingRole && (
+                                    <CreateRoleModal
+                                        users={users}
+                                        onClose={() => setCreatingRole(false)}
+                                        onSave={handleCreateRole}
+                                    />
+                                )}
+
+                                {editingRole && (
+                                    <EditRoleModal
+                                        role={editingRole}
+                                        onClose={() => setEditingRole(null)}
+                                        onSave={handleUpdateRole}
+                                    />
+                                )}
+                            </div>
                         ) : null}
                     </div>
                 </div>
@@ -517,6 +700,178 @@ function UserEditModal({
                             Cancel
                         </Button>
                         <Button type="submit">Save</Button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// Create Role Modal Component
+function CreateRoleModal({
+    users,
+    onClose,
+    onSave,
+}: {
+    users: User[];
+    onClose: () => void;
+    onSave: (data: { userId: string; role: string; permissions: any }) => Promise<void>;
+}) {
+    const [selectedUserId, setSelectedUserId] = useState('');
+    const [role, setRole] = useState('admin');
+    const [permissions, setPermissions] = useState({
+        manageUsers: false,
+        deleteUsers: false,
+        manageImages: false,
+        deleteImages: false,
+        manageCategories: false,
+        manageAdmins: false,
+        viewDashboard: true,
+    });
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedUserId) {
+            toast.error('Please select a user');
+            return;
+        }
+        await onSave({ userId: selectedUserId, role, permissions });
+    };
+
+    return (
+        <div className="admin-modal-overlay" onClick={onClose}>
+            <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="admin-modal-header">
+                    <h2>Create Admin Role</h2>
+                    <button onClick={onClose}>×</button>
+                </div>
+                <form onSubmit={handleSubmit} className="admin-modal-form">
+                    <div className="admin-form-group">
+                        <label>Select User</label>
+                        <select
+                            value={selectedUserId}
+                            onChange={(e) => setSelectedUserId(e.target.value)}
+                            required
+                            className="admin-select"
+                        >
+                            <option value="">Choose a user...</option>
+                            {users.filter(u => !u.isAdmin && !u.isSuperAdmin).map((u) => (
+                                <option key={u._id} value={u._id}>
+                                    {u.displayName} ({u.username})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="admin-form-group">
+                        <label>Role</label>
+                        <select
+                            value={role}
+                            onChange={(e) => setRole(e.target.value)}
+                            className="admin-select"
+                        >
+                            <option value="admin">Admin</option>
+                            <option value="moderator">Moderator</option>
+                        </select>
+                    </div>
+
+                    <div className="admin-form-group">
+                        <label>Permissions</label>
+                        <div className="admin-permissions-checkboxes">
+                            {Object.entries(permissions).map(([key, value]) => (
+                                <label key={key} className="admin-checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        checked={value as boolean}
+                                        onChange={(e) => setPermissions({ ...permissions, [key]: e.target.checked })}
+                                        disabled={key === 'viewDashboard'}
+                                    />
+                                    <span>{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="admin-modal-actions">
+                        <Button type="button" variant="outline" onClick={onClose}>
+                            Cancel
+                        </Button>
+                        <Button type="submit">Create Role</Button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// Edit Role Modal Component
+function EditRoleModal({
+    role,
+    onClose,
+    onSave,
+}: {
+    role: any;
+    onClose: () => void;
+    onSave: (userId: string, updates: { role?: string; permissions?: any }) => Promise<void>;
+}) {
+    const [selectedRole, setSelectedRole] = useState(role.role);
+    const [permissions, setPermissions] = useState(role.permissions || {});
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await onSave(role.userId._id || role.userId, { role: selectedRole, permissions });
+    };
+
+    return (
+        <div className="admin-modal-overlay" onClick={onClose}>
+            <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="admin-modal-header">
+                    <h2>Edit Admin Role</h2>
+                    <button onClick={onClose}>×</button>
+                </div>
+                <form onSubmit={handleSubmit} className="admin-modal-form">
+                    <div className="admin-form-group">
+                        <label>User</label>
+                        <Input
+                            value={role.userId?.displayName || role.userId?.username || ''}
+                            disabled
+                        />
+                    </div>
+
+                    <div className="admin-form-group">
+                        <label>Role</label>
+                        <select
+                            value={selectedRole}
+                            onChange={(e) => setSelectedRole(e.target.value)}
+                            className="admin-select"
+                        >
+                            <option value="admin">Admin</option>
+                            <option value="moderator">Moderator</option>
+                        </select>
+                    </div>
+
+                    <div className="admin-form-group">
+                        <label>Permissions</label>
+                        <div className="admin-permissions-checkboxes">
+                            {Object.entries(permissions).map(([key, value]) => (
+                                <label key={key} className="admin-checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        checked={value as boolean}
+                                        onChange={(e) => setPermissions({ ...permissions, [key]: e.target.checked })}
+                                        disabled={key === 'viewDashboard'}
+                                    />
+                                    <span>{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="admin-modal-actions">
+                        <Button type="button" variant="outline" onClick={onClose}>
+                            Cancel
+                        </Button>
+                        <Button type="submit">Save Changes</Button>
                     </div>
                 </form>
             </div>
