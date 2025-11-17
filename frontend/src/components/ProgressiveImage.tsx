@@ -29,12 +29,13 @@ const generateThumbnailUrl = (imageUrl: string): string => {
 
 /**
  * Generate Cloudinary small URL on-the-fly for old images
+ * Use higher resolution (800px) to prevent pixelation when displayed at full width
  */
 const generateSmallUrl = (imageUrl: string): string => {
   if (imageUrl.includes('cloudinary.com')) {
     return imageUrl.replace(
       /\/upload\//,
-      '/upload/w_400,q_auto:good,f_auto/'
+      '/upload/w_800,q_auto:good,f_auto/'
     );
   }
   return imageUrl;

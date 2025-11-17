@@ -11,6 +11,9 @@
   height: 100%;
   object-fit: cover;
   transition: opacity 0.3s ease-in-out;
+  image-rendering: -webkit-optimize-contrast; /* Better quality on WebKit browsers */
+  image-rendering: high-quality; /* Better quality on modern browsers */
+  image-rendering: auto; /* Fallback - smooth scaling for photos */
 }
 
 .progressive-image.loading {
