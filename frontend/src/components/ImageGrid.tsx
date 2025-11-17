@@ -106,9 +106,6 @@ const ImageGrid = () => {
     });
   }, [currentImageIds]);
 
-  // Track attached handlers per image element to prevent re-attachment
-  const attachedHandlers = useRef<WeakMap<HTMLImageElement, boolean>>(new WeakMap());
-
   const handleTrendingClick = (search: string) => {
     fetchImages({ search, page: 1 });
   };
@@ -234,7 +231,7 @@ const ImageGrid = () => {
                         handleImageLoad(image._id, img);
                       }
                     }}
-                    onError={(e) => {
+                    onError={() => {
                       // Error handling is done in ProgressiveImage component
                     }}
                   />

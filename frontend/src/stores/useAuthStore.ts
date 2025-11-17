@@ -26,7 +26,9 @@ export const useAuthStore =
 			password,
 			email,
 			firstName,
-			lastName
+			lastName,
+			phone,
+			bio
 		) => {
 			try {
 				set({ loading: true });
@@ -37,7 +39,9 @@ export const useAuthStore =
 					password,
 					email,
 					firstName,
-					lastName
+					lastName,
+					phone,
+					bio
 				);
 
 				toast.success(

@@ -50,7 +50,7 @@ const ProgressiveImage = ({
   src,
   thumbnailUrl,
   smallUrl,
-  regularUrl,
+  regularUrl: _regularUrl, // Reserved for future use (e.g., detail view)
   alt,
   className = '',
   onLoad,

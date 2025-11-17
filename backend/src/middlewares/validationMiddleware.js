@@ -51,6 +51,16 @@ export const validateSignUp = [
         .trim()
         .notEmpty()
         .withMessage('Last name is required'),
+    body('phone')
+        .optional()
+        .trim()
+        .isLength({ max: 20 })
+        .withMessage('Phone number must be less than 20 characters'),
+    body('bio')
+        .optional()
+        .trim()
+        .isLength({ max: 500 })
+        .withMessage('Bio must be less than 500 characters'),
     validate,
 ];
 

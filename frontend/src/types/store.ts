@@ -24,7 +24,9 @@ export interface AuthState {
 		password: string,
 		email: string,
 		firstName: string,
-		lastName: string
+		lastName: string,
+		phone?: string,
+		bio?: string
 	) => Promise<void>;
 	signIn: (
 		username: string,

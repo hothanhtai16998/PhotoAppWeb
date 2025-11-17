@@ -10,8 +10,26 @@ import { Eye, EyeOff } from "lucide-react";
 import "./SignUpPage.css";
 
 const signUpSchema = z.object({
+    username: z.string()
+        .min(3, { message: "Username must be at least 3 characters." })
+        .max(20, { message: "Username must be less than 20 characters." })
+        .regex(/^[a-zA-Z0-9_]+$/, { message: "Username can only contain letters, numbers, and underscores." }),
+    firstName: z.string()
+        .min(1, { message: "First name is required." })
+        .trim(),
+    lastName: z.string()
+        .min(1, { message: "Last name is required." })
+        .trim(),
     email: z.string().email({ message: "Please enter a valid email address." }),
-    password: z.string().min(8, { message: "Password must be at least 8 characters." }),
+    password: z.string()
+        .min(8, { message: "Password must be at least 8 characters." })
+        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, { 
+            message: "Password must contain uppercase, lowercase, and a number." 
+        }),
+    confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
 });
 
 type SignUpFormValue = z.infer<typeof signUpSchema>;
@@ -29,13 +47,13 @@ function SignUpPage() {
     const onSubmit = async (data: SignUpFormValue) => {
         setIsSubmitting(true);
         try {
-            // For now, we'll use email as username and generate a display name
-            // In a real implementation, you'd have a multi-step form
-            const username = data.email.split('@')[0] + Math.floor(Math.random() * 1000);
-            const firstName = data.email.split('@')[0];
-            const lastName = '';
-
-            await signUp(username, data.password, data.email, firstName, lastName);
+            await signUp(
+                data.username, 
+                data.password, 
+                data.email, 
+                data.firstName, 
+                data.lastName
+            );
             navigate("/signin");
         } catch (error) {
             // Error is handled by the store
@@ -117,6 +135,49 @@ function SignUpPage() {
                             </p>
                         </div>
 
+                        {/* Username */}
+                        <div className="form-group">
+                            <Input
+                                type="text"
+                                id="username"
+                                placeholder="Username"
+                                {...register('username')}
+                                className={errors.username ? 'error' : ''}
+                            />
+                            {errors.username && (
+                                <p className="error-message">{errors.username.message}</p>
+                            )}
+                        </div>
+
+                        {/* First Name and Last Name */}
+                        <div className="form-group-row">
+                            <div className="form-group">
+                                <Input
+                                    type="text"
+                                    id="firstName"
+                                    placeholder="First name"
+                                    {...register('firstName')}
+                                    className={errors.firstName ? 'error' : ''}
+                                />
+                                {errors.firstName && (
+                                    <p className="error-message">{errors.firstName.message}</p>
+                                )}
+                            </div>
+                            <div className="form-group">
+                                <Input
+                                    type="text"
+                                    id="lastName"
+                                    placeholder="Last name"
+                                    {...register('lastName')}
+                                    className={errors.lastName ? 'error' : ''}
+                                />
+                                {errors.lastName && (
+                                    <p className="error-message">{errors.lastName.message}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Email */}
                         <div className="form-group">
                             <Input
                                 type="email"
@@ -130,6 +191,7 @@ function SignUpPage() {
                             )}
                         </div>
 
+                        {/* Password */}
                         <div className="form-group">
                             <div className="password-input-wrapper">
                                 <Input
@@ -149,6 +211,22 @@ function SignUpPage() {
                             </div>
                             {errors.password && (
                                 <p className="error-message">{errors.password.message}</p>
+                            )}
+                        </div>
+
+                        {/* Confirm Password */}
+                        <div className="form-group">
+                            <div className="password-input-wrapper">
+                                <Input
+                                    type={showPassword ? "text" : "password"}
+                                    id="confirmPassword"
+                                    placeholder="Confirm password"
+                                    {...register('confirmPassword')}
+                                    className={errors.confirmPassword ? 'error' : ''}
+                                />
+                            </div>
+                            {errors.confirmPassword && (
+                                <p className="error-message">{errors.confirmPassword.message}</p>
                             )}
                         </div>
 

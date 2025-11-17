@@ -15,7 +15,7 @@ const BACKEND_URL = env.CLIENT_URL || `http://localhost:${env.PORT || 3000}`;
 const GOOGLE_REDIRECT_URI = env.GOOGLE_REDIRECT_URI || `${BACKEND_URL}/api/auth/google/callback`;
 
 export const signUp = asyncHandler(async (req, res) => {
-    const { username, password, email, firstName, lastName } = req.body;
+    const { username, password, email, firstName, lastName, phone, bio } = req.body;
 
     // Note: Input validation is handled by validationMiddleware
     // This is just for data extraction
@@ -55,6 +55,8 @@ export const signUp = asyncHandler(async (req, res) => {
         email,
         displayName: `${firstName.trim()} ${lastName.trim()}`,
         isOAuthUser: false,
+        phone: phone?.trim() || undefined,
+        bio: bio?.trim() || undefined,
     });
 
     return res.status(201).json({
