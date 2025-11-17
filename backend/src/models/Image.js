@@ -32,9 +32,9 @@ const imageSchema = new mongoose.Schema(
             // Optional - will fallback to imageUrl if not set
         },
         imageCategory: {
-            type: String,
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Category',
             required: true,
-            trim: true,
             index: true,
         },
         uploadedBy: {

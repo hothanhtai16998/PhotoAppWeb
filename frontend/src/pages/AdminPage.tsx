@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { adminService, type DashboardStats, type User, type AdminImage } from '@/services/adminService';
+import { categoryService, type Category } from '@/services/categoryService';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,12 +14,13 @@ import {
     Edit2, 
     Search,
     Shield,
-    UserCog
+    UserCog,
+    Tag
 } from 'lucide-react';
 import { toast } from 'sonner';
 import './AdminPage.css';
 
-type TabType = 'dashboard' | 'users' | 'images' | 'roles';
+type TabType = 'dashboard' | 'users' | 'images' | 'categories' | 'roles';
 
 function AdminPage() {
     const { user, fetchMe } = useAuthStore();
@@ -37,6 +39,11 @@ function AdminPage() {
     const [images, setImages] = useState<AdminImage[]>([]);
     const [imagesPagination, setImagesPagination] = useState({ page: 1, pages: 1, total: 0 });
     const [imagesSearch, setImagesSearch] = useState('');
+
+    // Categories state
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+    const [creatingCategory, setCreatingCategory] = useState(false);
 
     // Roles state
     const [adminRoles, setAdminRoles] = useState<any[]>([]);
@@ -68,6 +75,8 @@ function AdminPage() {
             loadUsers();
         } else if (activeTab === 'images') {
             loadImages();
+        } else if (activeTab === 'categories') {
+            loadCategories();
         } else if (activeTab === 'roles') {
             loadAdminRoles();
         }
@@ -162,6 +171,54 @@ function AdminPage() {
     };
 
 
+    const loadCategories = async () => {
+        try {
+            setLoading(true);
+            const data = await categoryService.getAllCategoriesAdmin();
+            setCategories(data);
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to load categories');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCreateCategory = async (data: { name: string; description?: string }) => {
+        try {
+            await categoryService.createCategory(data);
+            toast.success('Category created successfully');
+            setCreatingCategory(false);
+            loadCategories();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to create category');
+        }
+    };
+
+    const handleUpdateCategory = async (categoryId: string, updates: { name?: string; description?: string; isActive?: boolean }) => {
+        try {
+            await categoryService.updateCategory(categoryId, updates);
+            toast.success('Category updated successfully');
+            setEditingCategory(null);
+            loadCategories();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to update category');
+        }
+    };
+
+    const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
+        if (!confirm(`Are you sure you want to delete category "${categoryName}"? This will only work if no images are using this category.`)) {
+            return;
+        }
+
+        try {
+            await categoryService.deleteCategory(categoryId);
+            toast.success('Category deleted successfully');
+            loadCategories();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to delete category');
+        }
+    };
+
     const loadAdminRoles = async () => {
         if (!user?.isSuperAdmin) return;
         try {
@@ -253,6 +310,13 @@ function AdminPage() {
                             >
                                 <Images size={20} />
                                 Images
+                            </button>
+                            <button
+                                className={`admin-nav-item ${activeTab === 'categories' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('categories')}
+                            >
+                                <Tag size={20} />
+                                Categories
                             </button>
                             {user?.isSuperAdmin && (
                                 <button
@@ -537,6 +601,82 @@ function AdminPage() {
                                             Next
                                         </Button>
                                     </div>
+                                )}
+                            </div>
+                        ) : activeTab === 'categories' ? (
+                            <div className="admin-categories">
+                                <div className="admin-header">
+                                    <h1 className="admin-title">Category Management</h1>
+                                    <Button onClick={() => setCreatingCategory(true)}>
+                                        + Create Category
+                                    </Button>
+                                </div>
+
+                                <div className="admin-table">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Description</th>
+                                                <th>Images</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {categories.map((cat) => (
+                                                <tr key={cat._id}>
+                                                    <td><strong>{cat.name}</strong></td>
+                                                    <td>{cat.description || '-'}</td>
+                                                    <td>{cat.imageCount || 0}</td>
+                                                    <td>
+                                                        <span className={`admin-status-badge ${cat.isActive ? 'admin' : 'none'}`}>
+                                                            {cat.isActive ? 'Active' : 'Inactive'}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <div className="admin-actions">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => setEditingCategory(cat)}
+                                                            >
+                                                                <Edit2 size={16} />
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handleDeleteCategory(cat._id, cat.name)}
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {categories.length === 0 && (
+                                    <div className="admin-empty-state">
+                                        <p>No categories found. Create one to get started.</p>
+                                    </div>
+                                )}
+
+                                {creatingCategory && (
+                                    <CreateCategoryModal
+                                        onClose={() => setCreatingCategory(false)}
+                                        onSave={handleCreateCategory}
+                                    />
+                                )}
+
+                                {editingCategory && (
+                                    <EditCategoryModal
+                                        category={editingCategory}
+                                        onClose={() => setEditingCategory(null)}
+                                        onSave={handleUpdateCategory}
+                                    />
                                 )}
                             </div>
                         ) : activeTab === 'roles' && user?.isSuperAdmin ? (
@@ -867,6 +1007,140 @@ function EditRoleModal({
                         </div>
                     </div>
 
+                    <div className="admin-modal-actions">
+                        <Button type="button" variant="outline" onClick={onClose}>
+                            Cancel
+                        </Button>
+                        <Button type="submit">Save Changes</Button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// Create Category Modal Component
+function CreateCategoryModal({
+    onClose,
+    onSave,
+}: {
+    onClose: () => void;
+    onSave: (data: { name: string; description?: string }) => Promise<void>;
+}) {
+    const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name.trim()) {
+            toast.error('Category name is required');
+            return;
+        }
+        await onSave({ name: name.trim(), description: description.trim() || undefined });
+    };
+
+    return (
+        <div className="admin-modal-overlay" onClick={onClose}>
+            <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="admin-modal-header">
+                    <h2>Create Category</h2>
+                    <button onClick={onClose}>×</button>
+                </div>
+                <form onSubmit={handleSubmit} className="admin-modal-form">
+                    <div className="admin-form-group">
+                        <label>Category Name *</label>
+                        <Input
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required
+                            placeholder="e.g., Nature, Portrait, Architecture"
+                        />
+                    </div>
+                    <div className="admin-form-group">
+                        <label>Description</label>
+                        <textarea
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={3}
+                            placeholder="Optional description for this category"
+                        />
+                    </div>
+                    <div className="admin-modal-actions">
+                        <Button type="button" variant="outline" onClick={onClose}>
+                            Cancel
+                        </Button>
+                        <Button type="submit">Create</Button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// Edit Category Modal Component
+function EditCategoryModal({
+    category,
+    onClose,
+    onSave,
+}: {
+    category: Category;
+    onClose: () => void;
+    onSave: (categoryId: string, updates: { name?: string; description?: string; isActive?: boolean }) => Promise<void>;
+}) {
+    const [name, setName] = useState(category.name);
+    const [description, setDescription] = useState(category.description || '');
+    const [isActive, setIsActive] = useState(category.isActive !== false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name.trim()) {
+            toast.error('Category name is required');
+            return;
+        }
+        await onSave(category._id, {
+            name: name.trim() !== category.name ? name.trim() : undefined,
+            description: description.trim() || '',
+            isActive,
+        });
+    };
+
+    return (
+        <div className="admin-modal-overlay" onClick={onClose}>
+            <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="admin-modal-header">
+                    <h2>Edit Category</h2>
+                    <button onClick={onClose}>×</button>
+                </div>
+                <form onSubmit={handleSubmit} className="admin-modal-form">
+                    <div className="admin-form-group">
+                        <label>Category Name *</label>
+                        <Input
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required
+                        />
+                        <small style={{ color: '#666', marginTop: '4px', display: 'block' }}>
+                            Changing the name will update all images using this category.
+                        </small>
+                    </div>
+                    <div className="admin-form-group">
+                        <label>Description</label>
+                        <textarea
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={3}
+                        />
+                    </div>
+                    <div className="admin-form-group">
+                        <label className="admin-checkbox-label">
+                            <input
+                                type="checkbox"
+                                checked={isActive}
+                                onChange={(e) => setIsActive(e.target.checked)}
+                            />
+                            Active
+                        </label>
+                    </div>
                     <div className="admin-modal-actions">
                         <Button type="button" variant="outline" onClick={onClose}>
                             Cancel

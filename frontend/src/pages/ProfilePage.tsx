@@ -30,16 +30,22 @@ function ProfilePage() {
             setImages(userImages);
 
             // Count photos and illustrations
-            const photos = userImages.filter(img =>
-                img.imageCategory &&
-                !img.imageCategory.toLowerCase().includes('illustration') &&
-                !img.imageCategory.toLowerCase().includes('svg')
-            );
-            const illustrations = userImages.filter(img =>
-                img.imageCategory &&
-                (img.imageCategory.toLowerCase().includes('illustration') ||
-                    img.imageCategory.toLowerCase().includes('svg'))
-            );
+            const photos = userImages.filter(img => {
+                const categoryName = typeof img.imageCategory === 'string' 
+                    ? img.imageCategory 
+                    : img.imageCategory?.name;
+                return categoryName &&
+                    !categoryName.toLowerCase().includes('illustration') &&
+                    !categoryName.toLowerCase().includes('svg');
+            });
+            const illustrations = userImages.filter(img => {
+                const categoryName = typeof img.imageCategory === 'string' 
+                    ? img.imageCategory 
+                    : img.imageCategory?.name;
+                return categoryName &&
+                    (categoryName.toLowerCase().includes('illustration') ||
+                        categoryName.toLowerCase().includes('svg'));
+            });
 
             setPhotosCount(photos.length);
             setIllustrationsCount(illustrations.length);
@@ -78,17 +84,23 @@ function ProfilePage() {
     }
 
     const displayImages = activeTab === 'photos'
-        ? images.filter(img =>
-            img.imageCategory &&
-            !img.imageCategory.toLowerCase().includes('illustration') &&
-            !img.imageCategory.toLowerCase().includes('svg')
-        )
+        ? images.filter(img => {
+            const categoryName = typeof img.imageCategory === 'string' 
+                ? img.imageCategory 
+                : img.imageCategory?.name;
+            return categoryName &&
+                !categoryName.toLowerCase().includes('illustration') &&
+                !categoryName.toLowerCase().includes('svg');
+        })
         : activeTab === 'illustrations'
-            ? images.filter(img =>
-                img.imageCategory &&
-                (img.imageCategory.toLowerCase().includes('illustration') ||
-                    img.imageCategory.toLowerCase().includes('svg'))
-            )
+            ? images.filter(img => {
+                const categoryName = typeof img.imageCategory === 'string' 
+                    ? img.imageCategory 
+                    : img.imageCategory?.name;
+                return categoryName &&
+                    (categoryName.toLowerCase().includes('illustration') ||
+                        categoryName.toLowerCase().includes('svg'));
+            })
             : [];
 
     return (

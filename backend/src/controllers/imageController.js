@@ -1,5 +1,7 @@
+import mongoose from 'mongoose';
 import cloudinary from '../libs/cloudinary.js';
 import Image from '../models/Image.js';
+import Category from '../models/Category.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { PAGINATION } from '../utils/constants.js';
@@ -28,7 +30,25 @@ export const getAllImages = asyncHandler(async (req, res) => {
         useTextSearch = true;
     }
     if (category) {
-        query.imageCategory = category;
+        // Find category by name (case-insensitive)
+        const categoryDoc = await Category.findOne({
+            name: { $regex: new RegExp(`^${category}$`, 'i') },
+            isActive: true,
+        });
+        if (categoryDoc) {
+            query.imageCategory = categoryDoc._id;
+        } else {
+            // If category not found, return empty results
+            return res.status(200).json({
+                images: [],
+                pagination: {
+                    page,
+                    limit,
+                    total: 0,
+                    pages: 0,
+                },
+            });
+        }
     }
 
     // Get images with pagination
@@ -37,6 +57,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
     const [images, total] = await Promise.all([
         Image.find(query)
             .populate('uploadedBy', 'username displayName avatarUrl')
+            .populate('imageCategory', 'name description')
             // Sort by text relevance score if using text search, otherwise by date
             .sort(useTextSearch ? { score: { $meta: 'textScore' }, createdAt: -1 } : { createdAt: -1 })
             .skip(skip)
@@ -76,6 +97,25 @@ export const uploadImage = asyncHandler(async (req, res) => {
     if (!imageTitle || !imageCategory) {
         return res.status(400).json({
             message: 'Title and category are required',
+        });
+    }
+
+    // Find category by name (case-insensitive) - accept either category name or ID
+    let categoryDoc;
+    if (mongoose.Types.ObjectId.isValid(imageCategory)) {
+        // If it's a valid ObjectId, try to find by ID
+        categoryDoc = await Category.findById(imageCategory);
+    } else {
+        // Otherwise, find by name
+        categoryDoc = await Category.findOne({
+            name: { $regex: new RegExp(`^${imageCategory.trim()}$`, 'i') },
+            isActive: true,
+        });
+    }
+
+    if (!categoryDoc) {
+        return res.status(400).json({
+            message: 'Invalid or inactive category',
         });
     }
 
@@ -135,14 +175,15 @@ export const uploadImage = asyncHandler(async (req, res) => {
             regularUrl, // Regular size for detail
             publicId: uploadResponse.public_id,
             imageTitle: imageTitle.trim(),
-            imageCategory: imageCategory.trim(),
+            imageCategory: categoryDoc._id, // Use category ObjectId
             uploadedBy: userId,
             location: location?.trim() || undefined,
             cameraModel: cameraModel?.trim() || undefined,
         });
 
-        // Populate user info
+        // Populate user and category info
         await newImage.populate('uploadedBy', 'username displayName avatarUrl');
+        await newImage.populate('imageCategory', 'name description');
 
         res.status(201).json({
             message: 'Image uploaded successfully',
@@ -173,6 +214,7 @@ export const getImagesByUserId = asyncHandler(async (req, res) => {
     const [images, total] = await Promise.all([
         Image.find({ uploadedBy: userId })
             .populate('uploadedBy', 'username displayName avatarUrl')
+            .populate('imageCategory', 'name description')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)

@@ -38,9 +38,12 @@ function UploadPage() {
             
             // Group images by category
             for (const category of categories) {
-                const categoryImgs = allImages.filter(img => 
-                    img.imageCategory && img.imageCategory.toLowerCase() === category.toLowerCase()
-                ).slice(0, 4);
+                const categoryImgs = allImages.filter(img => {
+                    const categoryName = typeof img.imageCategory === 'string' 
+                        ? img.imageCategory 
+                        : img.imageCategory?.name;
+                    return categoryName && categoryName.toLowerCase() === category.toLowerCase();
+                }).slice(0, 4);
                 
                 if (categoryImgs.length >= 2) {
                     categoryData.push({ category, images: categoryImgs });

@@ -63,11 +63,15 @@ const ImageGrid = () => {
     const categoryMap = new Map<string, Image[]>();
     images.forEach(img => {
       if (img.imageCategory) {
-        const category = img.imageCategory;
-        if (!categoryMap.has(category)) {
-          categoryMap.set(category, []);
+        const category = typeof img.imageCategory === 'string' 
+          ? img.imageCategory 
+          : img.imageCategory?.name;
+        if (category) {
+          if (!categoryMap.has(category)) {
+            categoryMap.set(category, []);
+          }
+          categoryMap.get(category)!.push(img);
         }
-        categoryMap.get(category)!.push(img);
       }
     });
 

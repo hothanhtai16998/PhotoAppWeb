@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import Image from '../models/Image.js';
 import AdminRole from '../models/AdminRole.js';
+import Category from '../models/Category.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import cloudinary from '../libs/cloudinary.js';
@@ -12,12 +13,24 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
         User.countDocuments(),
         Image.countDocuments(),
         User.find().sort({ createdAt: -1 }).limit(5).select('username email displayName createdAt isAdmin').lean(),
-        Image.find().sort({ createdAt: -1 }).limit(10).populate('uploadedBy', 'username displayName').select('imageTitle imageCategory createdAt uploadedBy').lean(),
+        Image.find().sort({ createdAt: -1 }).limit(10).populate('uploadedBy', 'username displayName').populate('imageCategory', 'name').select('imageTitle imageCategory createdAt uploadedBy').lean(),
     ]);
 
-    // Count images by category
+    // Count images by category (using lookup to get category names)
     const categoryStats = await Image.aggregate([
         { $group: { _id: '$imageCategory', count: { $sum: 1 } } },
+        { $lookup: {
+            from: 'categories',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'category'
+        }},
+        { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+        { $project: {
+            _id: 1,
+            count: 1,
+            name: { $ifNull: ['$category.name', 'Unknown'] }
+        }},
         { $sort: { count: -1 } },
         { $limit: 10 },
     ]);
@@ -245,7 +258,25 @@ export const getAllImagesAdmin = asyncHandler(async (req, res) => {
     }
 
     if (category) {
-        query.imageCategory = category;
+        // Find category by name (case-insensitive)
+        const categoryDoc = await Category.findOne({
+            name: { $regex: new RegExp(`^${category}$`, 'i') },
+            isActive: true,
+        });
+        if (categoryDoc) {
+            query.imageCategory = categoryDoc._id;
+        } else {
+            // If category not found, return empty results
+            return res.status(200).json({
+                images: [],
+                pagination: {
+                    page,
+                    limit,
+                    total: 0,
+                    pages: 0,
+                },
+            });
+        }
     }
 
     if (userId) {
@@ -255,6 +286,7 @@ export const getAllImagesAdmin = asyncHandler(async (req, res) => {
     const [images, total] = await Promise.all([
         Image.find(query)
             .populate('uploadedBy', 'username displayName email')
+            .populate('imageCategory', 'name description')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)

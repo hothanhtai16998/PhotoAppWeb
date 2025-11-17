@@ -5,6 +5,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom"
 import { Search, X, Shield } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useImageStore } from "@/stores/useImageStore"
+import { categoryService, type Category } from "@/services/categoryService"
 import UploadModal from "./UploadModal"
 import './Header.css'
 
@@ -16,9 +17,25 @@ export const Header = memo(function Header() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('Featured')
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [categories, setCategories] = useState<string[]>(['Featured'])
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const categories = ['Featured', 'Wallpapers', '3D Renders', 'Nature', 'Textures', 'Film', 'Architecture', 'Street Photography', 'Experimental', 'Travel', 'People']
+  // Fetch categories from backend
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const fetchedCategories = await categoryService.fetchCategories()
+        // Map to category names and add 'Featured' at the beginning
+        const categoryNames = ['Featured', ...fetchedCategories.map((cat: Category) => cat.name)]
+        setCategories(categoryNames)
+      } catch (error) {
+        console.error('Failed to load categories:', error)
+        // Fallback to default categories if API fails
+        setCategories(['Featured', 'Nature', 'Portrait', 'Architecture', 'Travel', 'Street', 'Abstract'])
+      }
+    }
+    loadCategories()
+  }, [])
 
   // Debounced search effect
   useEffect(() => {
@@ -63,6 +80,17 @@ export const Header = memo(function Header() {
     })
   }
 
+  const handleLogoClick = () => {
+    setSearchQuery('')
+    setActiveCategory('Featured')
+    if (location.pathname !== '/') {
+      navigate('/')
+    } else {
+      // If already on homepage, refresh images
+      fetchImages()
+    }
+  }
+
   const handleSignOut = async () => {
     await signOut()
     navigate("/")
@@ -73,7 +101,7 @@ export const Header = memo(function Header() {
       <div className="header-top">
         <div className="header-container">
           {/* Logo */}
-          <Link to="/" className="header-logo">
+          <Link to="/" className="header-logo" onClick={handleLogoClick}>
             <span>PhotoApp</span>
           </Link>
 

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useImageStore } from '@/stores/useImageStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { categoryService, type Category } from '@/services/categoryService';
 import { useNavigate } from 'react-router-dom';
 import { X, Upload, ArrowRight } from 'lucide-react';
 import './UploadModal.css';
@@ -35,6 +36,8 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     const [showProgress, setShowProgress] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [showTooltip, setShowTooltip] = useState(false);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [loadingCategories, setLoadingCategories] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const submitButtonRef = useRef<HTMLButtonElement>(null);
     const { register, handleSubmit, formState: { errors }, setValue, watch, reset, getValues } = useForm<UploadFormValues>({
@@ -52,6 +55,24 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     const imageTitle = watch('imageTitle');
     const imageCategory = watch('imageCategory');
     const imageRegister = register('image');
+
+    // Fetch categories when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            const loadCategories = async () => {
+                try {
+                    setLoadingCategories(true);
+                    const fetchedCategories = await categoryService.fetchCategories();
+                    setCategories(fetchedCategories);
+                } catch (error) {
+                    console.error('Failed to load categories:', error);
+                } finally {
+                    setLoadingCategories(false);
+                }
+            };
+            loadCategories();
+        }
+    }, [isOpen]);
 
     // Check if all required fields are filled
     const isFormValid = selectedFile !== null &&
@@ -443,12 +464,31 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                         </div>
                         <div className="form-group">
                             <Label htmlFor="imageCategory">Category</Label>
-                            <Input
-                                id="imageCategory"
-                                type="text"
-                                {...register('imageCategory')}
-                                placeholder="e.g., Nature, Portrait, Architecture"
-                            />
+                            {loadingCategories ? (
+                                <div style={{ padding: '8px', color: '#666' }}>Loading categories...</div>
+                            ) : categories.length === 0 ? (
+                                <div style={{ padding: '8px', color: '#999' }}>No categories available</div>
+                            ) : (
+                                <select
+                                    id="imageCategory"
+                                    {...register('imageCategory')}
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px 12px',
+                                        border: '1px solid #e5e5e5',
+                                        borderRadius: '6px',
+                                        fontSize: '0.9375rem',
+                                        backgroundColor: 'white',
+                                    }}
+                                >
+                                    <option value="">Select a category...</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat._id} value={cat._id}>
+                                            {cat.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
                             {errors.imageCategory && <p className="error-text">{errors.imageCategory.message}</p>}
                         </div>
                         <div className="form-group">

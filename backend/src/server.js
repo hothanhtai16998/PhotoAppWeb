@@ -10,6 +10,7 @@ import cors from 'cors';
 import compression from 'compression';
 import imageRoute from './routes/imageRoute.js';
 import adminRoute from './routes/adminRoute.js';
+import categoryRoute from './routes/categoryRoute.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { apiLimiter } from './middlewares/rateLimiter.js';
 import { logger } from './utils/logger.js';
@@ -57,6 +58,7 @@ app.use('/api/auth', authRoute);
 app.use('/api/users', userRoute);
 app.use('/api/images', imageRoute);
 app.use('/api/admin', adminRoute);
+app.use('/api/categories', categoryRoute);
 
 // Serve static files in production
 if (env.NODE_ENV === 'production') {
