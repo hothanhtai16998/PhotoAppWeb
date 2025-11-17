@@ -28,26 +28,45 @@ export const useImageStore = create(
 				state.error = null;
 				state.uploadProgress = 0;
 			});
+			
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
+			
 			try {
 				const response =
 					await imageService.uploadImage(
 						data,
 						(progress) => {
 							set((state) => {
-								// Progress tracks HTTP upload (0-90%)
+								// Progress tracks HTTP upload (0-85%)
 								state.uploadProgress =
 									progress;
 							});
 						}
 					);
 				// HTTP upload to backend complete (85%)
-				// Now backend is uploading to Cloudinary - show 85-95% range
-				set((state) => {
-					state.uploadProgress = 90; // Show we're processing
-				});
+				// Now backend is uploading to Cloudinary - simulate progress 85-95%
+				// This gives visual feedback that processing is happening
+				let cloudinaryProgress = 85;
+				
+				// Start progress simulation
+				progressInterval = setInterval(() => {
+					cloudinaryProgress += 1;
+					if (cloudinaryProgress < 95) {
+						set((state) => {
+							state.uploadProgress = cloudinaryProgress;
+						});
+					} else {
+						if (progressInterval) clearInterval(progressInterval);
+						progressInterval = null;
+					}
+				}, 500); // Update every 500ms
 
 				// Backend response received = Cloudinary upload AND processing complete
 				// The response only comes after Cloudinary finishes
+				if (progressInterval) {
+					clearInterval(progressInterval);
+					progressInterval = null;
+				}
 				set((state) => {
 					state.images.unshift(
 						response.image
@@ -60,17 +79,34 @@ export const useImageStore = create(
 					'Image uploaded successfully!'
 				);
 			} catch (error: unknown) {
-				const message =
-					(
-						error as {
-							response?: {
-								data?: {
-									message?: string;
-								};
-							};
-						}
-					)?.response?.data?.message ||
-					'Failed to upload image. Please try again.';
+				// Clear progress interval if it's still running
+				if (progressInterval) {
+					clearInterval(progressInterval);
+					progressInterval = null;
+				}
+
+				const axiosError = error as {
+					response?: {
+						data?: {
+							message?: string;
+						};
+						status?: number;
+					};
+					code?: string;
+					message?: string;
+				};
+
+				// Handle timeout errors specifically
+				let message = 'Failed to upload image. Please try again.';
+				
+				if (axiosError.code === 'ECONNABORTED' || axiosError.message?.includes('timeout')) {
+					message = 'Upload timeout: The upload took too long. Please try again with a smaller file or check your internet connection.';
+				} else if (axiosError.response?.data?.message) {
+					message = axiosError.response.data.message;
+				} else if (axiosError.message) {
+					message = axiosError.message;
+				}
+
 				set((state) => {
 					state.loading = false;
 					state.error = message;

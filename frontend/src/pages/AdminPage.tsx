@@ -716,13 +716,13 @@ function AdminPage() {
                                                     </td>
                                                     <td>
                                                         <div className="admin-permissions-list">
-                                                            {Object.entries(role.permissions || {}).map(([key, value]) => (
-                                                                value && (
+                                                            {Object.entries(role.permissions || {}).map(([key, value]) => 
+                                                                value ? (
                                                                     <span key={key} className="admin-permission-tag">
                                                                         {key}
                                                                     </span>
-                                                                )
-                                                            ))}
+                                                                ) : null
+                                                            )}
                                                         </div>
                                                     </td>
                                                     <td>

@@ -132,35 +132,49 @@ export const uploadImage = asyncHandler(async (req, res) => {
         // Convert buffer to readable stream for better performance with large files
         const bufferStream = Readable.from(req.file.buffer);
 
-        uploadResponse = await new Promise((resolve, reject) => {
-            const uploadStream = cloudinary.uploader.upload_stream(
-                {
-                    folder: 'photo-app-images',
-                    resource_type: 'image',
-                    // Generate multiple sizes for progressive loading (like Unsplash)
-                    eager: [
-                        // Thumbnail: 200px width, low quality for blur-up effect
-                        { width: 200, quality: 'auto:low', fetch_format: 'auto', crop: 'limit' },
-                        // Small: 400px width for grid view
-                        { width: 400, quality: 'auto:good', fetch_format: 'auto', crop: 'limit' },
-                        // Regular: 1080px width for detail view
-                        { width: 1080, quality: 'auto:good', fetch_format: 'auto', crop: 'limit' },
-                    ],
-                    // Main image transformation
-                    transformation: [
-                        { quality: 'auto:good' },
-                        { fetch_format: 'auto' },
-                    ],
-                },
-                (error, result) => {
-                    if (error) reject(error);
-                    else resolve(result);
-                }
-            );
+        // Add timeout for Cloudinary upload (90 seconds - should be enough for 10MB files)
+        const CLOUDINARY_UPLOAD_TIMEOUT = 90000; // 90 seconds
+        let uploadTimeout;
 
-            // Pipe buffer stream to upload stream
-            bufferStream.pipe(uploadStream);
-        });
+        uploadResponse = await Promise.race([
+            new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                    {
+                        folder: 'photo-app-images',
+                        resource_type: 'image',
+                        // Generate multiple sizes for progressive loading (like Unsplash)
+                        eager: [
+                            // Thumbnail: 200px width, low quality for blur-up effect
+                            { width: 200, quality: 'auto:low', fetch_format: 'auto', crop: 'limit' },
+                            // Small: 400px width for grid view
+                            { width: 400, quality: 'auto:good', fetch_format: 'auto', crop: 'limit' },
+                            // Regular: 1080px width for detail view
+                            { width: 1080, quality: 'auto:good', fetch_format: 'auto', crop: 'limit' },
+                        ],
+                        // Main image transformation
+                        transformation: [
+                            { quality: 'auto:good' },
+                            { fetch_format: 'auto' },
+                        ],
+                        // Add timeout to Cloudinary upload options
+                        timeout: CLOUDINARY_UPLOAD_TIMEOUT,
+                    },
+                    (error, result) => {
+                        if (uploadTimeout) clearTimeout(uploadTimeout);
+                        if (error) reject(error);
+                        else resolve(result);
+                    }
+                );
+
+                // Pipe buffer stream to upload stream
+                bufferStream.pipe(uploadStream);
+            }),
+            new Promise((_, reject) => {
+                uploadTimeout = setTimeout(() => {
+                    reject(new Error('Upload timeout: Image upload to Cloudinary took too long. Please try again with a smaller file or check your internet connection.'));
+                }, CLOUDINARY_UPLOAD_TIMEOUT);
+            }),
+        ]);
 
         // Extract different size URLs from eager transformations
         const thumbnailUrl = uploadResponse.eager?.[0]?.secure_url || uploadResponse.secure_url;
@@ -198,6 +212,27 @@ export const uploadImage = asyncHandler(async (req, res) => {
                 logger.error('Failed to rollback Cloudinary upload', rollbackError);
             }
         }
+
+        // Provide user-friendly error messages
+        if (error.message?.includes('timeout') || error.message?.includes('Upload timeout')) {
+            logger.error('Cloudinary upload timeout', {
+                fileSize: req.file?.size,
+                fileName: req.file?.originalname,
+            });
+            throw new Error(error.message || 'Upload timeout: The upload took too long. Please try again with a smaller file.');
+        }
+
+        // Handle Cloudinary-specific errors
+        if (error.http_code) {
+            logger.error('Cloudinary upload error', {
+                httpCode: error.http_code,
+                message: error.message,
+                fileSize: req.file?.size,
+            });
+            throw new Error(`Upload failed: ${error.message || 'Unable to upload image. Please try again.'}`);
+        }
+
+        // Re-throw other errors (they'll be handled by errorHandler middleware)
         throw error;
     }
 });

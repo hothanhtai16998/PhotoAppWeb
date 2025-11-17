@@ -8,6 +8,7 @@ export interface User {
 	phone?: string;
 	isOAuthUser?: boolean;
 	isAdmin?: boolean;
+	isSuperAdmin?: boolean;
 	createdAt?: string;
 	updatedAt?: string;
 }
