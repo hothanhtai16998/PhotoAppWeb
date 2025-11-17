@@ -61,12 +61,8 @@ export const Header = memo(function Header() {
 
   // Listen for refresh event after image upload and re-fetch with current category
   useEffect(() => {
-    const handleRefresh = (event: Event) => {
+    const handleRefresh = () => {
       if (location.pathname === '/') {
-        // Get category name from event detail if provided (from uploaded image)
-        const customEvent = event as CustomEvent;
-        const uploadedCategoryName = customEvent?.detail?.categoryName;
-        
         // After upload, the image is already in the store (added by uploadImage)
         // We just need to ensure it's visible by refreshing with the correct filter
         // If user has "Tất cả" selected, refresh with no filter
