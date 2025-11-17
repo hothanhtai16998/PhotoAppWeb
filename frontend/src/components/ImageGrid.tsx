@@ -213,6 +213,8 @@ const ImageGrid = () => {
         <div className="masonry-grid">
           {images.map((image) => {
             const imageType = imageTypes.get(image._id) || 'landscape'; // Get from state
+            // Debug: Check if uploadedBy exists
+            const hasUserInfo = image.uploadedBy && (image.uploadedBy.displayName || image.uploadedBy.username);
             return (
               <div
                 key={image._id}
@@ -235,43 +237,85 @@ const ImageGrid = () => {
                       // Error handling is done in ProgressiveImage component
                     }}
                   />
-                  <div className="masonry-overlay">
+                  <div 
+                    className="masonry-overlay"
+                    onMouseMove={(e) => {
+                      const overlay = e.currentTarget;
+                      const rect = overlay.getBoundingClientRect();
+                      const x = e.clientX - rect.left;
+                      const y = e.clientY - rect.top;
+                      // Keep tooltip within bounds (with 10px margin)
+                      const tooltipWidth = 200;
+                      const tooltipHeight = 40;
+                      const adjustedX = Math.max(tooltipWidth / 2, Math.min(x, rect.width - tooltipWidth / 2));
+                      const adjustedY = Math.max(tooltipHeight / 2, Math.min(y, rect.height - tooltipHeight / 2));
+                      overlay.style.setProperty('--mouse-x', `${adjustedX}px`);
+                      overlay.style.setProperty('--mouse-y', `${adjustedY}px`);
+                    }}
+                  >
+                    {/* Image Title Tooltip - follows mouse */}
+                    {image.imageTitle && (
+                      <div className="image-title-tooltip">
+                        {image.imageTitle}
+                      </div>
+                    )}
+                    
+                    {/* Top Right - Download Button */}
                     <div className="image-actions">
                       <button
-                        className="image-action-btn"
+                        className="image-action-btn download-btn"
                         onClick={(e) => {
                           e.preventDefault();
-                          window.open(image.imageUrl, '_blank');
+                          e.stopPropagation();
+                          // Create download link
+                          const link = document.createElement('a');
+                          link.href = image.imageUrl;
+                          link.download = image.imageTitle || 'photo';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
                         }}
                         title="Download"
                       >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                           <polyline points="7 10 12 15 17 10"></polyline>
                           <line x1="12" y1="15" x2="12" y2="3"></line>
                         </svg>
                       </button>
-                      <button
-                        className="image-action-btn"
-                        onClick={(e) => {
-                          e.preventDefault();
-                        }}
-                        title="Bookmark"
-                      >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                        </svg>
-                      </button>
                     </div>
-                    <div className="image-info">
-                      {image.uploadedBy && (
+                    
+                    {/* Bottom Left - User Info */}
+                    {hasUserInfo && (
+                      <div className="image-info">
                         <div className="image-author-info">
-                          <span className="image-author-name">
-                            {image.uploadedBy.displayName || image.uploadedBy.username}
-                          </span>
+                          {image.uploadedBy.avatarUrl ? (
+                            <img 
+                              src={image.uploadedBy.avatarUrl} 
+                              alt={image.uploadedBy.displayName || image.uploadedBy.username}
+                              className="author-avatar"
+                              style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px', maxWidth: '32px', maxHeight: '32px' }}
+                              onError={(e) => {
+                                // Hide avatar if it fails to load
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="author-avatar-placeholder" style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px', maxWidth: '32px', maxHeight: '32px' }}>
+                              {(image.uploadedBy.displayName || image.uploadedBy.username || 'U').charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="author-details">
+                            <span className="image-author-name">
+                              {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
+                            </span>
+                            {image.uploadedBy.bio && (
+                              <span className="author-bio">{image.uploadedBy.bio}</span>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </a>
               </div>
