@@ -19,7 +19,7 @@ export const changePassword = asyncHandler(async (req, res) => {
 
     if (!password || !newPassword || !newPasswordMatch) {
         return res.status(400).json({
-            message: "Các trường mật khẩu và xác nhận mật khẩu mới không được để trống",
+            message: "Mật khẩu và xác nhận mật khẩu mới không được để trống",
         });
     }
 
@@ -75,7 +75,7 @@ export const changeInfo = asyncHandler(async (req, res) => {
         // Prevent OAuth users from changing email (must match Google account)
         if (currentUser.isOAuthUser) {
             return res.status(403).json({
-                message: "Email cannot be changed for accounts using Google login. Please update your email in your Google account."
+                message: "Không thể thay đổi email đã liên kết với Google."
             });
         }
 
@@ -87,7 +87,7 @@ export const changeInfo = asyncHandler(async (req, res) => {
 
         if (existingEmail) {
             return res.status(409).json({
-                message: "Email already exists"
+                message: "Email đã tồn tại"
             });
         }
         updateData.email = email.toLowerCase().trim();
@@ -102,7 +102,7 @@ export const changeInfo = asyncHandler(async (req, res) => {
     // Prevent OAuth users from changing avatar (must use Google avatar)
     if (req.file && currentUser.isOAuthUser) {
         return res.status(403).json({
-            message: "Avatar cannot be changed for accounts using Google login. Your avatar is managed by your Google account."
+            message: "Không thể thay đổi ảnh đại diện được liên kết với tài khoản Google."
         });
     }
 
@@ -137,7 +137,7 @@ export const changeInfo = asyncHandler(async (req, res) => {
                 try {
                     await cloudinary.uploader.destroy(currentUser.avatarId);
                 } catch (deleteError) {
-                    logger.warn('Failed to delete old avatar', deleteError);
+                    logger.warn('Lỗi xoá ảnh từ Cloudinary', deleteError);
                     // Continue even if deletion fails
                 }
             }
@@ -145,9 +145,9 @@ export const changeInfo = asyncHandler(async (req, res) => {
             updateData.avatarUrl = uploadResponse.secure_url;
             updateData.avatarId = uploadResponse.public_id;
         } catch (error) {
-            logger.error('Failed to upload avatar', error);
+            logger.error('Lỗi không thể cập nhật ảnh đại diện', error);
             return res.status(500).json({
-                message: "Failed to upload avatar"
+                message: "Lỗi hệ thống"
             });
         }
     }
@@ -160,7 +160,7 @@ export const changeInfo = asyncHandler(async (req, res) => {
     ).select('-hashedPassword');
 
     return res.status(200).json({
-        message: "Profile updated successfully",
+        message: "Cập nhật thông tin thành công",
         user: updatedUser
     });
 })

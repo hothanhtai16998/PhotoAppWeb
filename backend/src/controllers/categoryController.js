@@ -17,7 +17,7 @@ export const getAllCategoriesAdmin = asyncHandler(async (req, res) => {
     // Check permission (super admin or admin with manageCategories permission)
     if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageCategories) {
         return res.status(403).json({
-            message: 'Permission denied: manageCategories required',
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
         });
     }
 
@@ -45,7 +45,7 @@ export const createCategory = asyncHandler(async (req, res) => {
     // Check permission (super admin or admin with manageCategories permission)
     if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageCategories) {
         return res.status(403).json({
-            message: 'Permission denied: manageCategories required',
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
         });
     }
 
@@ -53,7 +53,7 @@ export const createCategory = asyncHandler(async (req, res) => {
 
     if (!name || !name.trim()) {
         return res.status(400).json({
-            message: 'Category name is required',
+            message: 'Tên danh mục không được để trống',
         });
     }
 
@@ -64,7 +64,7 @@ export const createCategory = asyncHandler(async (req, res) => {
 
     if (existingCategory) {
         return res.status(400).json({
-            message: 'Category already exists',
+            message: 'Danh mục đã tồn tại với tên này',
         });
     }
 
@@ -75,7 +75,7 @@ export const createCategory = asyncHandler(async (req, res) => {
     });
 
     res.status(201).json({
-        message: 'Category created successfully',
+        message: 'Tạo danh mục thành công',
         category,
     });
 });
@@ -84,7 +84,7 @@ export const updateCategory = asyncHandler(async (req, res) => {
     // Check permission (super admin or admin with manageCategories permission)
     if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageCategories) {
         return res.status(403).json({
-            message: 'Permission denied: manageCategories required',
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
         });
     }
 
@@ -95,7 +95,7 @@ export const updateCategory = asyncHandler(async (req, res) => {
 
     if (!category) {
         return res.status(404).json({
-            message: 'Category not found',
+            message: 'Không tìm thấy danh mục',
         });
     }
 
@@ -113,7 +113,7 @@ export const updateCategory = asyncHandler(async (req, res) => {
 
         if (existingCategory) {
             return res.status(400).json({
-                message: 'Category name already exists',
+                message: 'Danh mục đã tồn tại với tên này',
             });
         }
 
@@ -139,7 +139,7 @@ export const updateCategory = asyncHandler(async (req, res) => {
     );
 
     res.status(200).json({
-        message: 'Category updated successfully',
+        message: 'Tạo mới hoặc cập nhật danh mục thành công',
         category: updatedCategory,
     });
 });
@@ -148,7 +148,7 @@ export const deleteCategory = asyncHandler(async (req, res) => {
     // Check permission (super admin or admin with manageCategories permission)
     if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageCategories) {
         return res.status(403).json({
-            message: 'Permission denied: manageCategories required',
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
         });
     }
 
@@ -158,7 +158,7 @@ export const deleteCategory = asyncHandler(async (req, res) => {
 
     if (!category) {
         return res.status(404).json({
-            message: 'Category not found',
+            message: 'Không tìm thấy danh mục',
         });
     }
 
@@ -167,14 +167,14 @@ export const deleteCategory = asyncHandler(async (req, res) => {
 
     if (imageCount > 0) {
         return res.status(400).json({
-            message: `Cannot delete category. ${imageCount} image(s) are using this category. Please update or delete those images first.`,
+            message: `Không thể xoá danh mục này. Hiện đang có ${imageCount} ảnh đang dùng danh mục này. Vui lòng cập nhật danh mục mới hoặc xoá các ảnh này trước.`,
         });
     }
 
     await Category.findByIdAndDelete(categoryId);
 
     res.status(200).json({
-        message: 'Category deleted successfully',
+        message: 'Xoá danh mục thành công',
     });
 });
 

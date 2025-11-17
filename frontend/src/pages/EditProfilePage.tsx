@@ -141,8 +141,8 @@ function EditProfilePage() {
             const formData = new FormData();
 
             // Add text fields
-            formData.append('firstName', data.firstName);
-            formData.append('lastName', data.lastName);
+            formData.append('Tên', data.firstName);
+            formData.append('Họ', data.lastName);
             formData.append('email', data.email);
             if (data.bio) {
                 formData.append('bio', data.bio);
@@ -150,7 +150,7 @@ function EditProfilePage() {
 
             // Add avatar if selected
             if (selectedAvatar) {
-                formData.append('avatar', selectedAvatar);
+                formData.append('Ảnh đại diện', selectedAvatar);
             }
 
             await userService.updateProfile(formData);
@@ -165,7 +165,7 @@ function EditProfilePage() {
                 fileInputRef.current.value = '';
             }
 
-            toast.success('Profile updated successfully');
+            toast.success('Cập nhật thông tin thành công');
         } catch (error: unknown) {
             const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to update profile. Please try again.";
             toast.error(errorMessage);
@@ -204,13 +204,13 @@ function EditProfilePage() {
 
     // Filter menu items based on user type
     const allMenuItems = [
-        { id: 'edit-profile', label: 'Edit profile' },
-        { id: 'hiring', label: 'Hiring' },
-        { id: 'download-history', label: 'Download history' },
-        { id: 'email-settings', label: 'Email settings' },
-        { id: 'change-password', label: 'Change password' },
-        { id: 'applications', label: 'Applications' },
-        { id: 'close-account', label: 'Close account' },
+        { id: 'edit-profile', label: 'Chỉnh sửa thông tin' },
+        // { id: 'hiring', label: 'Hiring' },
+        { id: 'download-history', label: 'Lịch sử tải xuống' },
+        // { id: 'email-settings', label: 'Email settings' },
+        { id: 'change-password', label: 'Đổi mật khẩu' },
+        // { id: 'applications', label: 'Applications' },
+        // { id: 'close-account', label: 'Close account' },
     ];
 
     // Hide "Change password" for OAuth users
@@ -225,7 +225,7 @@ function EditProfilePage() {
                 <div className="profile-settings-container">
                     {/* Left Sidebar */}
                     <aside className="profile-sidebar">
-                        <h2 className="sidebar-title">Account settings</h2>
+                        <h2 className="sidebar-title">Cài đặt tài khoản</h2>
                         <nav className="sidebar-nav">
                             {menuItems.map((item) => (
                                 <button
@@ -243,7 +243,7 @@ function EditProfilePage() {
                     <div className="profile-main-content">
                         {activeSection === 'edit-profile' && (
                             <form onSubmit={handleSubmit(onSubmit)} className="profile-form">
-                                <h1 className="form-title">Edit profile</h1>
+                                <h1 className="form-title">Chỉnh sửa thông tin</h1>
 
                                 {/* Profile Image Section */}
                                 <div className="profile-image-section">
@@ -261,7 +261,7 @@ function EditProfilePage() {
                                             {isUploadingAvatar && (
                                                 <div className="image-upload-overlay">
                                                     <div className="upload-spinner"></div>
-                                                    <p className="upload-text">Uploading...</p>
+                                                    <p className="upload-text">Đang tải...</p>
                                                 </div>
                                             )}
                                         </div>
@@ -280,11 +280,11 @@ function EditProfilePage() {
                                             disabled={isUploadingAvatar || user?.isOAuthUser}
                                             style={user?.isOAuthUser ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                                         >
-                                            Change profile image
+                                            Đổi ảnh đại diện
                                         </button>
                                         {user?.isOAuthUser && (
                                             <p className="field-hint" style={{ fontSize: '0.8125rem', color: '#767676', marginTop: '8px', textAlign: 'center' }}>
-                                                Avatar is managed by your Google account
+                                                Ảnh thuộc tài khoản Google (không thể thay đổi)
                                             </p>
                                         )}
                                     </div>
@@ -292,11 +292,11 @@ function EditProfilePage() {
                                     <div className="profile-basic-info">
                                         <div className="form-row">
                                             <div className="form-field">
-                                                <Label htmlFor="firstName">First name</Label>
+                                                <Label htmlFor="firstName">Họ</Label>
                                                 <Input id="firstName" {...register('firstName')} />
                                             </div>
                                             <div className="form-field">
-                                                <Label htmlFor="lastName">Last name</Label>
+                                                <Label htmlFor="lastName">Tên</Label>
                                                 <Input id="lastName" {...register('lastName')} />
                                                 <div className="account-badge">
                                                     <CheckCircle2 size={16} />
@@ -315,12 +315,12 @@ function EditProfilePage() {
                                             />
                                             {user?.isOAuthUser && (
                                                 <p className="field-hint" style={{ fontSize: '0.8125rem', color: '#767676', marginTop: '4px' }}>
-                                                    Email is managed by your Google account
+                                                    Email thuộc tài khoản Google (không thể thay Đổi)
                                                 </p>
                                             )}
                                         </div>
                                         <div className="form-field">
-                                            <Label htmlFor="username">Username</Label>
+                                            <Label htmlFor="username">Tên đăng nhập</Label>
                                             <Input id="username" {...register('username')} readOnly />
                                             <p className="field-hint">(only letters, numbers, and underscores)</p>
                                             <p className="field-url">https://photoapp.com/@{watch('username') || user.username}</p>

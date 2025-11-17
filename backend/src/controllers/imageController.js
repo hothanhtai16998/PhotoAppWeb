@@ -122,13 +122,13 @@ export const uploadImage = asyncHandler(async (req, res) => {
 
     if (!req.file) {
         return res.status(400).json({
-            message: 'Image file is required',
+            message: 'Bạn chưa chọn ảnh',
         });
     }
 
     if (!imageTitle || !imageCategory) {
         return res.status(400).json({
-            message: 'Title and category are required',
+            message: 'Tiêu đề và danh mục của ảnh không được để trống',
         });
     }
 
@@ -147,14 +147,14 @@ export const uploadImage = asyncHandler(async (req, res) => {
 
     if (!categoryDoc) {
         return res.status(400).json({
-            message: 'Invalid or inactive category',
+            message: 'Danh mục ảnh không tồn tại hoặc đã bị xóa',
         });
     }
 
     // Validate file type
     if (!req.file.mimetype.startsWith('image/')) {
         return res.status(400).json({
-            message: 'File must be an image',
+            message: 'Tệp phải có định dạng là ảnh hoặc video',
         });
     }
 
@@ -203,7 +203,7 @@ export const uploadImage = asyncHandler(async (req, res) => {
             }),
             new Promise((_, reject) => {
                 uploadTimeout = setTimeout(() => {
-                    reject(new Error('Upload timeout: Image upload to Cloudinary took too long. Please try again with a smaller file or check your internet connection.'));
+                    reject(new Error('Lỗi tải ảnh: vui lòng thử lại với ảnh có dung lượng nhỏ hơn hoặc kiểm tra kết nối mạng của bạn.'));
                 }, CLOUDINARY_UPLOAD_TIMEOUT);
             }),
         ]);
@@ -232,7 +232,7 @@ export const uploadImage = asyncHandler(async (req, res) => {
         await newImage.populate('imageCategory', 'name description');
 
         res.status(201).json({
-            message: 'Image uploaded successfully',
+            message: 'Thêm ảnh thành công',
             image: newImage,
         });
     } catch (error) {
@@ -241,27 +241,27 @@ export const uploadImage = asyncHandler(async (req, res) => {
             try {
                 await cloudinary.uploader.destroy(uploadResponse.public_id);
             } catch (rollbackError) {
-                logger.error('Failed to rollback Cloudinary upload', rollbackError);
+                logger.error('Lỗi tải ảnh từ Cloudinary', rollbackError);
             }
         }
 
         // Provide user-friendly error messages
         if (error.message?.includes('timeout') || error.message?.includes('Upload timeout')) {
-            logger.error('Cloudinary upload timeout', {
+            logger.error('Lỗi tải ảnh từ Cloudinary', {
                 fileSize: req.file?.size,
                 fileName: req.file?.originalname,
             });
-            throw new Error(error.message || 'Upload timeout: The upload took too long. Please try again with a smaller file.');
+            throw new Error(error.message || 'Lỗi tải ảnh: vui lòng thử lại với ảnh có dung lượng nhỏ hơn hoặc kiểm tra kết nối mạng của bạn.');
         }
 
         // Handle Cloudinary-specific errors
         if (error.http_code) {
-            logger.error('Cloudinary upload error', {
+            logger.error('Lỗi tải ảnh từ Cloudinary', {
                 httpCode: error.http_code,
                 message: error.message,
                 fileSize: req.file?.size,
             });
-            throw new Error(`Upload failed: ${error.message || 'Unable to upload image. Please try again.'}`);
+            throw new Error(`Tải ảnh thất bại: ${error.message || 'Không thể tải ảnh lên server. Vui lòng thử lại.'}`);
         }
 
         // Re-throw other errors (they'll be handled by errorHandler middleware)

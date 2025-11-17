@@ -19,18 +19,22 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     // Count images by category (using lookup to get category names)
     const categoryStats = await Image.aggregate([
         { $group: { _id: '$imageCategory', count: { $sum: 1 } } },
-        { $lookup: {
-            from: 'categories',
-            localField: '_id',
-            foreignField: '_id',
-            as: 'category'
-        }},
+        {
+            $lookup: {
+                from: 'categories',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'category'
+            }
+        },
         { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
-        { $project: {
-            _id: 1,
-            count: 1,
-            name: { $ifNull: ['$category.name', 'Unknown'] }
-        }},
+        {
+            $project: {
+                _id: 1,
+                count: 1,
+                name: { $ifNull: ['$category.name', 'Unknown'] }
+            }
+        },
         { $sort: { count: -1 } },
         { $limit: 10 },
     ]);
@@ -51,7 +55,7 @@ export const getAllUsers = asyncHandler(async (req, res) => {
     // Check permission (super admin or admin with manageUsers permission)
     if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageUsers) {
         return res.status(403).json({
-            message: 'Permission denied: manageUsers required',
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
         });
     }
 
@@ -97,7 +101,7 @@ export const getUserById = asyncHandler(async (req, res) => {
 
     if (!user) {
         return res.status(404).json({
-            message: 'User not found',
+            message: 'Không tìm thấy tên tài khoản',
         });
     }
 
@@ -119,7 +123,7 @@ export const updateUser = asyncHandler(async (req, res) => {
     // Check permission (super admin or admin with manageUsers permission)
     if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageUsers) {
         return res.status(403).json({
-            message: 'Permission denied: manageUsers required',
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
         });
     }
 
@@ -127,14 +131,14 @@ export const updateUser = asyncHandler(async (req, res) => {
 
     if (!user) {
         return res.status(404).json({
-            message: 'User not found',
+            message: 'Không tìm thấy tên tài khoản',
         });
     }
 
     // Prevent non-super admins from updating super admin users
     if (user.isSuperAdmin && !req.user.isSuperAdmin) {
         return res.status(403).json({
-            message: 'Permission denied: Cannot update super admin user',
+            message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
         });
     }
 
@@ -152,7 +156,7 @@ export const updateUser = asyncHandler(async (req, res) => {
 
         if (existingUser) {
             return res.status(400).json({
-                message: 'Email already exists',
+                message: 'Email đã tồn tại',
             });
         }
 
@@ -172,7 +176,7 @@ export const updateUser = asyncHandler(async (req, res) => {
     }).select('-hashedPassword');
 
     res.status(200).json({
-        message: 'User updated successfully',
+        message: 'Cập nhật thành công',
         user: updatedUser,
     });
 });
@@ -183,7 +187,7 @@ export const deleteUser = asyncHandler(async (req, res) => {
     // Check permission (only super admin or admin with deleteUsers permission)
     if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.deleteUsers) {
         return res.status(403).json({
-            message: 'Permission denied: deleteUsers required',
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
         });
     }
 
@@ -191,21 +195,21 @@ export const deleteUser = asyncHandler(async (req, res) => {
 
     if (!user) {
         return res.status(404).json({
-            message: 'User not found',
+            message: 'Không tìm thấy tên tài khoản',
         });
     }
 
     // Prevent deleting yourself
     if (userId === req.user._id.toString()) {
         return res.status(400).json({
-            message: 'Cannot delete your own account',
+            message: 'Không thể xóa tài khoản của bạn',
         });
     }
 
     // Prevent non-super admins from deleting super admin users
     if (user.isSuperAdmin && !req.user.isSuperAdmin) {
         return res.status(403).json({
-            message: 'Permission denied: Cannot delete super admin user',
+            message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
         });
     }
 
@@ -217,7 +221,7 @@ export const deleteUser = asyncHandler(async (req, res) => {
         try {
             await cloudinary.uploader.destroy(image.publicId);
         } catch (error) {
-            logger.warn(`Failed to delete image ${image.publicId} from Cloudinary:`, error);
+            logger.warn(`Lỗi không thể xoá ảnh ${image.publicId} từ Cloudinary:`, error);
         }
     }
 
@@ -228,7 +232,7 @@ export const deleteUser = asyncHandler(async (req, res) => {
     await User.findByIdAndDelete(userId);
 
     res.status(200).json({
-        message: 'User deleted successfully',
+        message: 'Xoá tài khoản thành công',
     });
 });
 
@@ -237,7 +241,7 @@ export const getAllImagesAdmin = asyncHandler(async (req, res) => {
     // Check permission (super admin or admin with manageImages permission)
     if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageImages) {
         return res.status(403).json({
-            message: 'Permission denied: manageImages required',
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
         });
     }
 
@@ -311,7 +315,7 @@ export const deleteImage = asyncHandler(async (req, res) => {
     // Check permission (only super admin or admin with deleteImages permission)
     if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.deleteImages) {
         return res.status(403).json({
-            message: 'Permission denied: deleteImages required',
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
         });
     }
 
@@ -319,7 +323,7 @@ export const deleteImage = asyncHandler(async (req, res) => {
 
     if (!image) {
         return res.status(404).json({
-            message: 'Image not found',
+            message: 'Không tìm thấy ảnh',
         });
     }
 
@@ -327,14 +331,14 @@ export const deleteImage = asyncHandler(async (req, res) => {
     try {
         await cloudinary.uploader.destroy(image.publicId);
     } catch (error) {
-        logger.warn(`Failed to delete image ${image.publicId} from Cloudinary:`, error);
+        logger.warn(`Lỗi không thể xoá ảnh ${image.publicId} từ Cloudinary:`, error);
     }
 
     // Delete from database
     await Image.findByIdAndDelete(imageId);
 
     res.status(200).json({
-        message: 'Image deleted successfully',
+        message: 'Xoá ảnh thành công',
     });
 });
 
@@ -343,7 +347,7 @@ export const getAllAdminRoles = asyncHandler(async (req, res) => {
     // Only super admin can view all admin roles
     if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
         return res.status(403).json({
-            message: 'Super admin access required',
+            message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
         });
     }
 
@@ -374,7 +378,7 @@ export const getAdminRole = asyncHandler(async (req, res) => {
     // Users can view their own role, super admin can view any
     if (userId !== req.user._id.toString() && !req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
         return res.status(403).json({
-            message: 'Permission denied',
+            message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
         });
     }
 
@@ -385,7 +389,7 @@ export const getAdminRole = asyncHandler(async (req, res) => {
 
     if (!adminRole) {
         return res.status(404).json({
-            message: 'Admin role not found',
+            message: 'Không tìm thấy quyền admin',
         });
     }
 
@@ -398,7 +402,7 @@ export const createAdminRole = asyncHandler(async (req, res) => {
     // Only super admin can create admin roles
     if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
         return res.status(403).json({
-            message: 'Super admin access required to delegate admin roles',
+            message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
         });
     }
 
@@ -406,7 +410,7 @@ export const createAdminRole = asyncHandler(async (req, res) => {
 
     if (!userId) {
         return res.status(400).json({
-            message: 'User ID is required',
+            message: 'Cần ID tên tài khoản',
         });
     }
 
@@ -414,14 +418,14 @@ export const createAdminRole = asyncHandler(async (req, res) => {
 
     if (!user) {
         return res.status(404).json({
-            message: 'User not found',
+            message: 'Không tìm thấy tài khoản',
         });
     }
 
     // Prevent creating admin role for super admin users
     if (user.isSuperAdmin) {
         return res.status(400).json({
-            message: 'Cannot create admin role for super admin user',
+            message: 'Tài khoản hiện tại là Super admin, không thể tạo quyền admin cho Super admin',
         });
     }
 
@@ -430,7 +434,7 @@ export const createAdminRole = asyncHandler(async (req, res) => {
 
     if (existingRole) {
         return res.status(400).json({
-            message: 'User already has an admin role',
+            message: 'Tài khoản đang có quyền admin',
         });
     }
 
@@ -458,7 +462,7 @@ export const createAdminRole = asyncHandler(async (req, res) => {
     await adminRole.populate('grantedBy', 'username displayName');
 
     res.status(201).json({
-        message: 'Admin role created successfully',
+        message: 'Thêm quyền admin thành công',
         adminRole,
     });
 });
@@ -467,7 +471,7 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
     // Only super admin can update admin roles
     if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
         return res.status(403).json({
-            message: 'Super admin access required to update admin roles',
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
         });
     }
 
@@ -478,7 +482,7 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
 
     if (!adminRole) {
         return res.status(404).json({
-            message: 'Admin role not found',
+            message: 'Tài khoản này không có quyền admin',
         });
     }
 
@@ -486,14 +490,14 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
     const user = await User.findById(userId);
     if (user && user.isSuperAdmin) {
         return res.status(400).json({
-            message: 'Cannot update admin role for super admin user',
+            message: 'Tại khoản hiện tại là Super admin, không thể thay đổi quyền admin cho Super admin',
         });
     }
 
     // Prevent changing your own role
     if (userId === req.user._id.toString()) {
         return res.status(400).json({
-            message: 'Cannot modify your own admin role',
+            message: 'Không thể thay đổi quyền admin của tài khoản hiện tại',
         });
     }
 
@@ -519,7 +523,7 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
         .populate('grantedBy', 'username displayName');
 
     res.status(200).json({
-        message: 'Admin role updated successfully',
+        message: 'Cập nhật quyền admin thành công',
         adminRole: updatedRole,
     });
 });
@@ -528,7 +532,7 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
     // Only super admin can delete admin roles
     if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
         return res.status(403).json({
-            message: 'Super admin access required to remove admin roles',
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
         });
     }
 
@@ -537,7 +541,7 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
     // Prevent removing your own role
     if (userId === req.user._id.toString()) {
         return res.status(400).json({
-            message: 'Cannot remove your own admin role',
+            message: 'Không thể tự xóa quyền admin của tài khoản hiện tại',
         });
     }
 
@@ -545,7 +549,7 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
 
     if (!adminRole) {
         return res.status(404).json({
-            message: 'Admin role not found',
+            message: 'Tải khoản này không có quyền admin',
         });
     }
 
@@ -553,7 +557,7 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
     const user = await User.findById(userId);
     if (user && user.isSuperAdmin) {
         return res.status(400).json({
-            message: 'Cannot delete admin role for super admin user',
+            message: 'Không thể xóa quyền admin cho Super admin',
         });
     }
 
@@ -567,7 +571,7 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
     }
 
     res.status(200).json({
-        message: 'Admin role removed successfully',
+        message: 'Xoá quyền admin thành công',
     });
 });
 

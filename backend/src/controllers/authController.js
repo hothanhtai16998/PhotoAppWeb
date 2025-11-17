@@ -22,7 +22,7 @@ export const signUp = asyncHandler(async (req, res) => {
 
     // Validate password is provided for regular signup
     if (!password) {
-        return res.status(400).json({ message: "Password is required" });
+        return res.status(400).json({ message: "Mật khẩu không được để trống" });
     }
 
     // Check if username or email already exists
@@ -32,16 +32,16 @@ export const signUp = asyncHandler(async (req, res) => {
 
     if (existingUser) {
         if (existingUser.username === username) {
-            return res.status(409).json({ message: "Username already exists" });
+            return res.status(409).json({ message: "Tên tài khoản đã tồn tại" });
         }
         // If email exists and user is OAuth user, provide helpful message
         if (existingUser.email === email.toLowerCase()) {
             if (existingUser.isOAuthUser) {
                 return res.status(409).json({
-                    message: "This email is already registered with Google login. Please sign in with Google instead."
+                    message: "Email này đã đăng ký với tài khoản Google, xin vui lòng đăng nhập bằng Google."
                 });
             }
-            return res.status(409).json({ message: "Email already exists" });
+            return res.status(409).json({ message: "Email đã tồn tại" });
         }
     }
 
@@ -60,7 +60,7 @@ export const signUp = asyncHandler(async (req, res) => {
     });
 
     return res.status(201).json({
-        message: "User created successfully",
+        message: "Tạo tài khoản thành công",
     });
 });
 
@@ -74,7 +74,7 @@ export const signIn = asyncHandler(async (req, res) => {
 
     if (!user) {
         return res.status(401).json({
-            message: "Invalid username or password",
+            message: "Tên tài khoản hoặc mật khẩu không đúng",
         });
     }
 
@@ -88,7 +88,7 @@ export const signIn = asyncHandler(async (req, res) => {
     // Verify password
     if (!user.hashedPassword) {
         return res.status(401).json({
-            message: "Invalid username or password",
+            message: "Tên tài khoản hoặc mật khẩu không đúng",
         });
     }
 
@@ -96,7 +96,7 @@ export const signIn = asyncHandler(async (req, res) => {
 
     if (!isPasswordMatch) {
         return res.status(401).json({
-            message: "Invalid username or password",
+            message: "Tên tài khoản hoặc mật khẩu không đúng",
         });
     }
 
@@ -127,7 +127,7 @@ export const signIn = asyncHandler(async (req, res) => {
     });
 
     return res.status(200).json({
-        message: "Login successful",
+        message: "Đăng nhập thành công",
         accessToken,
         user: {
             _id: user._id,
@@ -154,7 +154,7 @@ export const signOut = asyncHandler(async (req, res) => {
     });
 
     return res.status(200).json({
-        message: "Logout successful",
+        message: "Đăng xuất thành công",
     });
 });
 
@@ -163,7 +163,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
 
     if (!token) {
         return res.status(401).json({
-            message: "Refresh token not found",
+            message: "không tìm thấy Refresh token",
         });
     }
 
@@ -172,7 +172,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
 
     if (!session) {
         return res.status(403).json({
-            message: "Invalid or expired refresh token",
+            message: "Refresh token không hợp lệ hoặc đã hết hạn",
         });
     }
 
@@ -180,7 +180,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
     if (session.expiresAt < new Date()) {
         await Session.deleteOne({ refreshToken: token });
         return res.status(403).json({
-            message: "Refresh token expired",
+            message: "Refresh token đã hết hạn",
         });
     }
 

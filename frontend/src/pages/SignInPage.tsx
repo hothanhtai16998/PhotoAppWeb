@@ -11,8 +11,8 @@ import { toast } from "sonner";
 import "./SignInPage.css";
 
 const signInSchema = z.object({
-    username: z.string().min(1, { message: "Username is required." }),
-    password: z.string().min(1, { message: "Password is required." }),
+    username: z.string().min(1, { message: "Tên tải khoản không được để trống." }),
+    password: z.string().min(1, { message: "Mật khẩu không được để trống." }),
 });
 
 type SignInFormValue = z.infer<typeof signInSchema>;
@@ -83,8 +83,8 @@ function SignInPage() {
             <div className="signin-modal">
                 <div className="signin-modal-content">
                     <div className="signin-header">
-                        <h1 className="signin-title">Welcome back</h1>
-                        <p className="signin-subtitle">Sign in to your account</p>
+                        <h1 className="signin-title">Chào mừng bạn</h1>
+                        <p className="signin-subtitle">Hãy đăng nhập để bắt đầu</p>
                     </div>
 
                     {/* Social Login Buttons */}
@@ -99,34 +99,34 @@ function SignInPage() {
                         <button
                             type="button"
                             className="social-btn apple-btn"
-                            onClick={() => handleSocialLogin('apple')}
+                            onClick={() => handleSocialLogin('facebook')}
                         >
-                            <span className="social-icon">🍎</span>
+                            <span className="social-icon facebook-btn">F</span>
                         </button>
                         <button
                             type="button"
-                            className="social-btn microsoft-btn"
-                            onClick={() => handleSocialLogin('microsoft')}
+                            className="social-btn apple-btn"
+                            onClick={() => handleSocialLogin('apple')}
                         >
-                            <span className="social-icon">M</span>
+                            <span className="social-icon">A</span>
                         </button>
                     </div>
 
                     {/* Separator */}
                     <div className="signin-separator">
                         <div className="separator-line"></div>
-                        <span className="separator-text">Or</span>
+                        <span className="separator-text">Hoặc</span>
                         <div className="separator-line"></div>
                     </div>
 
                     {/* Email Signin Form */}
                     <form onSubmit={handleSubmit(onSubmit)} className="signin-form">
                         <div className="signin-form-header">
-                            <h2 className="form-subtitle">Sign in with email</h2>
+                            <h2 className="form-subtitle">Đăng nhập bằng tài khoản</h2>
                             <p className="form-switch">
-                                Don't have an account?{" "}
+                                Chưa có tài khoản?{" "}
                                 <Link to="/signup" className="form-link">
-                                    Sign up
+                                    Đăng ký
                                 </Link>
                             </p>
                         </div>
@@ -136,7 +136,7 @@ function SignInPage() {
                             <Input
                                 type="text"
                                 id="username"
-                                placeholder="Username"
+                                placeholder="Tên tài khoản"
                                 {...register('username')}
                                 className={errors.username ? 'error' : ''}
                             />
@@ -151,7 +151,7 @@ function SignInPage() {
                                 <Input
                                     type={showPassword ? "text" : "password"}
                                     id="password"
-                                    placeholder="Password"
+                                    placeholder="Mật khẩu"
                                     {...register('password')}
                                     className={errors.password ? 'error' : ''}
                                 />
@@ -173,14 +173,14 @@ function SignInPage() {
                             className="continue-btn"
                             disabled={isSubmitting}
                         >
-                            {isSubmitting ? 'Signing in...' : 'Sign in'}
+                            {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
                         </Button>
                     </form>
                 </div>
             </div>
 
             {/* Footer */}
-            <footer className="signin-footer">
+            {/* <footer className="signin-footer">
                 <p className="footer-text">
                     Copyright © 2025 PhotoApp. All rights reserved.
                 </p>
@@ -190,7 +190,7 @@ function SignInPage() {
                     <a href="#" className="footer-link">Privacy</a>
                     <a href="#" className="footer-link">Do not sell or share my personal information</a>
                 </div>
-            </footer>
+            </footer> */}
         </div>
     );
 }
