@@ -421,7 +421,11 @@ function AdminPage() {
                                                 {stats.recentImages.map((img) => (
                                                     <tr key={img._id}>
                                                         <td>{img.imageTitle}</td>
-                                                        <td>{img.imageCategory}</td>
+                                                        <td>
+                                                            {typeof img.imageCategory === 'string' 
+                                                                ? img.imageCategory 
+                                                                : img.imageCategory?.name || 'Unknown'}
+                                                        </td>
                                                         <td>{img.uploadedBy?.displayName || img.uploadedBy?.username}</td>
                                                         <td>{new Date(img.createdAt).toLocaleDateString()}</td>
                                                     </tr>
@@ -569,7 +573,9 @@ function AdminPage() {
                                             <img src={img.imageUrl} alt={img.imageTitle} />
                                             <div className="admin-image-info">
                                                 <h3>{img.imageTitle}</h3>
-                                                <p>Category: {img.imageCategory}</p>
+                                                <p>Category: {typeof img.imageCategory === 'string' 
+                                                    ? img.imageCategory 
+                                                    : img.imageCategory?.name || 'Unknown'}</p>
                                                 <p>By: {img.uploadedBy.displayName || img.uploadedBy.username}</p>
                                                 <Button
                                                     variant="outline"
