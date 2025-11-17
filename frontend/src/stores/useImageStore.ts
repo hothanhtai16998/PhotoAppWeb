@@ -156,8 +156,27 @@ export const useImageStore = create(
 					}
 
 					if (isNewQuery) {
-						// New query - replace images (but browser cache will prevent redownload)
-						state.images = newImages;
+						// New query - replace images, but preserve recently uploaded images
+						// that might not be in the backend response yet (within last 30 seconds)
+						const now = Date.now();
+						const recentUploads = state.images.filter(img => {
+							// Keep images that were uploaded in the last 30 seconds
+							// These might not be in the backend response yet
+							if (img.createdAt) {
+								const uploadTime = new Date(img.createdAt).getTime();
+								return (now - uploadTime) < 30000; // 30 seconds
+							}
+							return false;
+						});
+
+						// Merge: recent uploads first, then fetched images (avoiding duplicates)
+						const fetchedIds = new Set(newImages.map(img => img._id));
+						const uniqueRecentUploads = recentUploads.filter(img => !fetchedIds.has(img._id));
+						
+						state.images = [
+							...uniqueRecentUploads,
+							...newImages,
+						];
 					} else {
 						// Pagination - merge with existing, avoiding duplicates
 						const existingIds = new Set(

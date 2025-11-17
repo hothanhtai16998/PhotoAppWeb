@@ -140,6 +140,8 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         try {
             // Upload will update progress from 0 to 100% in real-time via the progress callback
             // The progress tracks the actual file upload to Cloudinary
+            // Note: uploadImage doesn't return the response, it updates the store
+            // We'll get the category from the form data instead
             await uploadImage({ image: image[0], ...rest });
 
             // Wait a moment to show 100% and "Published 1 of 1" before transitioning to success
@@ -150,13 +152,23 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
             setShowSuccess(true);
 
             // Dispatch refresh event immediately after successful upload
-            // This will trigger ProfilePage and ImageGrid to refresh
+            // This will trigger ProfilePage and Header to refresh
             window.dispatchEvent(new CustomEvent('refreshProfile'));
-            // Dispatch refresh with category info if available
-            const refreshEvent = new CustomEvent('refreshImages', {
-                detail: { category: data.imageCategory }
-            });
-            window.dispatchEvent(refreshEvent);
+
+            // Get the category name from the selected category in the form
+            // Find the category name from the categories list using the selected ID
+            const selectedCategoryId = data.imageCategory.trim();
+            const selectedCategory = categories.find(cat => cat._id === selectedCategoryId);
+            const categoryName = selectedCategory?.name || null;
+
+            // Dispatch refresh event for Header to handle (with a small delay to ensure backend processed)
+            // Pass the category name so Header can refresh with the correct filter
+            setTimeout(() => {
+                const refreshEvent = new CustomEvent('refreshImages', {
+                    detail: { categoryName }
+                });
+                window.dispatchEvent(refreshEvent);
+            }, 300);
         } catch {
             setShowProgress(false);
             setShowSuccess(false);

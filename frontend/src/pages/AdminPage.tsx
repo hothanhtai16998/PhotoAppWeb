@@ -1006,7 +1006,7 @@ function EditRoleModal({
                     <div className="admin-form-group">
                         <label>Quyền hạn</label>
                         <div className="admin-permissions-checkboxes">
-                            {Object.entries(allPermissions).map(([key]) => (
+                            {Object.entries(permissions).map(([key]) => (
                                 <label key={key} className="admin-checkbox-label">
                                     <input
                                         type="checkbox"

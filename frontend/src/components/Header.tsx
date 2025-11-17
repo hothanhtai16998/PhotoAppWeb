@@ -61,17 +61,32 @@ export const Header = memo(function Header() {
 
   // Listen for refresh event after image upload and re-fetch with current category
   useEffect(() => {
-    const handleRefresh = () => {
+    const handleRefresh = (event: Event) => {
       if (location.pathname === '/') {
-        // Re-fetch with current active category to show newly uploaded image
+        // Get category name from event detail if provided (from uploaded image)
+        const customEvent = event as CustomEvent;
+        const uploadedCategoryName = customEvent?.detail?.categoryName;
+        
+        // Determine which category to use for refresh:
+        // 1. If user has "Tất cả" selected, refresh with no category (show all images)
+        // 2. If user has a specific category selected, use that category
+        // 3. The uploaded image will be preserved in store even if category doesn't match
+        const categoryToUse = activeCategory !== 'Tất cả' ? activeCategory : undefined;
+        
+        // Re-fetch with the appropriate category to show newly uploaded image
+        // Use a longer delay to ensure backend has fully processed the image
         setTimeout(() => {
           fetchImages({
             page: 1,
             _refresh: true,
-            category: activeCategory !== 'Tất cả' ? activeCategory : undefined,
+            category: categoryToUse,
             search: searchQuery || undefined,
-          })
-        }, 500)
+          }).catch((error) => {
+            console.error('Error refreshing images after upload:', error);
+            // Silently fail - don't show error toast as this is just a refresh
+            // The user can manually refresh if needed
+          });
+        }, 1000) // Increased delay to ensure backend has processed
       }
     }
 

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useImageStore } from '@/stores/useImageStore';
-import { ChevronRight, TrendingUp } from 'lucide-react';
+import { ChevronRight, TrendingUp, Download } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
+import { toast } from 'sonner';
 import './ImageGrid.css';
 
 const ImageGrid = () => {
@@ -17,33 +18,8 @@ const ImageGrid = () => {
     fetchImages();
   }, [fetchImages]);
 
-  // Listen for refresh event after image upload
-  useEffect(() => {
-    const handleRefresh = (event: Event) => {
-      // Reset to first page and fetch fresh images with cache-busting
-      // Preserve current category and search filters
-      // Use a small delay to ensure backend has processed the new image
-      const customEvent = event as CustomEvent;
-      const categoryFromEvent = customEvent?.detail?.category;
-      
-      setTimeout(() => {
-        // Use category from event if provided, otherwise use currentCategory from store
-        // The event detail contains the category ID, but we need the name for filtering
-        // So we'll use currentCategory which should be the name
-        fetchImages({ 
-          page: 1, 
-          _refresh: true,
-          category: currentCategory || undefined,
-          search: currentSearch || undefined,
-        });
-      }, 500);
-    };
-
-    window.addEventListener('refreshImages', handleRefresh);
-    return () => {
-      window.removeEventListener('refreshImages', handleRefresh);
-    };
-  }, [fetchImages, currentCategory, currentSearch]);
+  // Note: Header component handles the refresh event to maintain category filters
+  // ImageGrid doesn't need to listen to refresh events to avoid conflicts
 
   // Infinite scroll: Load more when reaching bottom
   useEffect(() => {
@@ -141,6 +117,96 @@ const ImageGrid = () => {
   const handleTrendingClick = (search: string) => {
     fetchImages({ search, page: 1 });
   };
+
+  // Download image function - handles CORS and Cloudinary URLs
+  // Fetches the original/highest quality image from Cloudinary
+  const handleDownloadImage = useCallback(async (image: Image, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      // Construct the original/highest quality URL from Cloudinary
+      // Cloudinary stores the original, and we want to download it without any transformations
+      let downloadUrl: string;
+      
+      if (image.publicId && image.imageUrl?.includes('cloudinary.com')) {
+        // Extract cloud_name and construct original URL
+        // Cloudinary URL pattern: https://res.cloudinary.com/{cloud_name}/image/upload/{transformations}/{public_id}.{format}
+        // For original (no transformations): https://res.cloudinary.com/{cloud_name}/image/upload/{public_id}.{format}
+        
+        const cloudinaryMatch = image.imageUrl.match(/res\.cloudinary\.com\/([^\/]+)\/image\/upload/);
+        if (cloudinaryMatch && cloudinaryMatch[1]) {
+          const cloudName = cloudinaryMatch[1];
+          
+          // Extract format from the original URL (it's usually at the end before query params)
+          const formatMatch = image.imageUrl.match(/\.([a-z]+)(?:\?|$)/i);
+          const format = formatMatch ? formatMatch[1] : 'jpg';
+          
+          // Construct original URL without any transformations
+          // This will fetch the original uploaded image at full quality
+          downloadUrl = `https://res.cloudinary.com/${cloudName}/image/upload/${image.publicId}.${format}`;
+        } else {
+          // Fallback: try to remove transformations from existing URL
+          downloadUrl = image.imageUrl.replace(/\/upload\/[^\/]+\//, '/upload/');
+        }
+      } else if (image.imageUrl?.includes('cloudinary.com')) {
+        // No publicId, but it's a Cloudinary URL - try to get original by removing transformations
+        // Pattern: .../upload/{transformations}/{public_id} -> .../upload/{public_id}
+        downloadUrl = image.imageUrl.replace(/\/upload\/[^\/]+\//, '/upload/');
+      } else {
+        // Not a Cloudinary URL or no publicId - use the highest quality URL available
+        downloadUrl = image.imageUrl || image.regularUrl || image.smallUrl || '';
+      }
+      
+      if (!downloadUrl) {
+        throw new Error('No image URL available');
+      }
+      
+      // Fetch the image as a blob to handle CORS
+      const response = await fetch(downloadUrl, {
+        mode: 'cors',
+        credentials: 'omit',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch image');
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Create download link
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      
+      // Get file extension from the download URL or use default
+      const urlExtension = downloadUrl.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'jpg';
+      const sanitizedTitle = (image.imageTitle || 'photo').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const fileName = `${sanitizedTitle}.${urlExtension}`;
+      link.download = fileName;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the blob URL after a short delay
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+      }, 100);
+
+      toast.success('Image downloaded successfully');
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Failed to download image. Please try again.');
+      
+      // Fallback: try opening in new tab if download fails
+      try {
+        window.open(image.imageUrl, '_blank');
+      } catch (fallbackError) {
+        console.error('Fallback download error:', fallbackError);
+      }
+    }
+  }, []);
 
   if (loading && images.length === 0) {
     return (
@@ -296,24 +362,11 @@ const ImageGrid = () => {
                     <div className="image-actions">
                       <button
                         className="image-action-btn download-btn"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          // Create download link
-                          const link = document.createElement('a');
-                          link.href = image.imageUrl;
-                          link.download = image.imageTitle || 'photo';
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                        }}
+                        onClick={(e) => handleDownloadImage(image, e)}
                         title="Download"
+                        aria-label="Download image"
                       >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                          <polyline points="7 10 12 15 17 10"></polyline>
-                          <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
+                        <Download size={20} />
                       </button>
                     </div>
                     
