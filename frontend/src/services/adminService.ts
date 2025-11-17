@@ -26,7 +26,7 @@ export interface AdminImage {
     _id: string;
     imageTitle: string;
     imageUrl: string;
-    imageCategory: string;
+    imageCategory: string | { _id: string; name: string; description?: string } | null;
     uploadedBy: {
         _id: string;
         username: string;
