@@ -40,7 +40,7 @@ export class ErrorBoundary extends Component<Props, State> {
 				<div className="flex min-h-screen items-center justify-center">
 					<div className="text-center">
 						<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-							Something went wrong
+							Lỗi...
 						</h1>
 						<p className="mt-2 text-gray-600 dark:text-gray-400">
 							{this.state.error?.message || 'An unexpected error occurred'}
@@ -52,7 +52,7 @@ export class ErrorBoundary extends Component<Props, State> {
 							}}
 							className="mt-4 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
 						>
-							Reload Page
+							Tải lại trang
 						</button>
 					</div>
 				</div>

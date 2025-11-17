@@ -15,9 +15,9 @@ export const Header = memo(function Header() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeCategory, setActiveCategory] = useState('Featured')
+  const [activeCategory, setActiveCategory] = useState('Tất cả')
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
-  const [categories, setCategories] = useState<string[]>(['Featured'])
+  const [categories, setCategories] = useState<string[]>(['Tất cả'])
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Fetch categories from backend
@@ -25,13 +25,13 @@ export const Header = memo(function Header() {
     const loadCategories = async () => {
       try {
         const fetchedCategories = await categoryService.fetchCategories()
-        // Map to category names and add 'Featured' at the beginning
-        const categoryNames = ['Featured', ...fetchedCategories.map((cat: Category) => cat.name)]
+        // Map to category names and add 'Tất cả' at the beginning
+        const categoryNames = ['Tất cả', ...fetchedCategories.map((cat: Category) => cat.name)]
         setCategories(categoryNames)
       } catch (error) {
         console.error('Failed to load categories:', error)
         // Fallback to default categories if API fails
-        setCategories(['Featured', 'Nature', 'Portrait', 'Architecture', 'Travel', 'Street', 'Abstract'])
+        setCategories(['Tất cả', 'Nature', 'Portrait', 'Architecture', 'Travel', 'Street', 'Abstract'])
       }
     }
     loadCategories()
@@ -47,7 +47,7 @@ export const Header = memo(function Header() {
       if (location.pathname === '/') {
         fetchImages({
           search: searchQuery || undefined,
-          category: activeCategory !== 'Featured' ? activeCategory : undefined,
+          category: activeCategory !== 'Tất cả' ? activeCategory : undefined,
         })
       }
     }, 500)
@@ -66,7 +66,7 @@ export const Header = memo(function Header() {
     }
     fetchImages({
       search: searchQuery || undefined,
-      category: activeCategory !== 'Featured' ? activeCategory : undefined,
+      category: activeCategory !== 'Tất cả' ? activeCategory : undefined,
     })
   }
 
@@ -76,13 +76,13 @@ export const Header = memo(function Header() {
       navigate('/')
     }
     fetchImages({
-      category: category !== 'Featured' ? category : undefined,
+      category: category !== 'Tất cả' ? category : undefined,
     })
   }
 
   const handleLogoClick = () => {
     setSearchQuery('')
-    setActiveCategory('Featured')
+    setActiveCategory('Tất cả')
     if (location.pathname !== '/') {
       navigate('/')
     } else {
@@ -112,7 +112,7 @@ export const Header = memo(function Header() {
             </div>
             <input
               type="text"
-              placeholder="Search photos and illustrations"
+              placeholder="Tìm ảnh hoặc bản vẻ illustration"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="search-input"
@@ -138,20 +138,20 @@ export const Header = memo(function Header() {
           <div className="header-actions">
             {accessToken ? (
               <>
-                <button onClick={() => setUploadModalOpen(true)} className="header-link">Submit an image</button>
+                <button onClick={() => setUploadModalOpen(true)} className="header-link">Thêm ảnh</button>
                 {user?.isAdmin && (
                   <Link to="/admin" className="header-link" title="Admin Panel">
                     <Shield size={18} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
                     Admin
                   </Link>
                 )}
-                <Link to="/profile" className="header-link">Profile</Link>
-                <button onClick={handleSignOut} className="header-link">Log out</button>
+                <Link to="/profile" className="header-link">Tài khoản</Link>
+                <button onClick={handleSignOut} className="header-link">Đăng xuất</button>
               </>
             ) : (
               <>
-                <Link to="/signin" className="header-link">Log in</Link>
-                <button onClick={() => navigate('/signin')} className="header-button">Submit an image</button>
+                <Link to="/signin" className="header-link">Đăng nhập</Link>
+                <button onClick={() => navigate('/signin')} className="header-button">Thêm ảnh</button>
               </>
             )}
           </div>

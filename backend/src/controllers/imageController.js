@@ -54,20 +54,52 @@ export const getAllImages = asyncHandler(async (req, res) => {
     // Get images with pagination
     // Use estimatedDocumentCount for better performance on large collections
     // Only use countDocuments if we need exact count (e.g., with filters)
-    const [images, total] = await Promise.all([
-        Image.find(query)
-            .populate('uploadedBy', 'username displayName avatarUrl')
-            .populate('imageCategory', 'name description')
-            // Sort by text relevance score if using text search, otherwise by date
-            .sort(useTextSearch ? { score: { $meta: 'textScore' }, createdAt: -1 } : { createdAt: -1 })
-            .skip(skip)
-            .limit(limit)
-            .lean(),
-        // For filtered queries, we need exact count. For unfiltered, estimated is faster
-        Object.keys(query).length > 0
-            ? Image.countDocuments(query)
-            : Image.estimatedDocumentCount(),
-    ]);
+    let imagesRaw, total;
+    try {
+        [imagesRaw, total] = await Promise.all([
+            Image.find(query)
+                .populate('uploadedBy', 'username displayName avatarUrl')
+                .populate({
+                    path: 'imageCategory',
+                    select: 'name description',
+                    // Handle missing categories gracefully (for legacy data or deleted categories)
+                    justOne: true
+                })
+                // Sort by text relevance score if using text search, otherwise by date
+                .sort(useTextSearch ? { score: { $meta: 'textScore' }, createdAt: -1 } : { createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            // For filtered queries, we need exact count. For unfiltered, estimated is faster
+            Object.keys(query).length > 0
+                ? Image.countDocuments(query)
+                : Image.estimatedDocumentCount(),
+        ]);
+    } catch (error) {
+        logger.error('Error fetching images (populate may have failed):', error);
+        // If populate fails (e.g., invalid category references), try without populating category
+        [imagesRaw, total] = await Promise.all([
+            Image.find(query)
+                .populate('uploadedBy', 'username displayName avatarUrl')
+                .sort(useTextSearch ? { score: { $meta: 'textScore' }, createdAt: -1 } : { createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            Object.keys(query).length > 0
+                ? Image.countDocuments(query)
+                : Image.estimatedDocumentCount(),
+        ]);
+    }
+
+    // Handle images with invalid or missing category references
+    // If category populate failed (null or invalid), set to null
+    const images = imagesRaw.map(img => ({
+        ...img,
+        // Ensure imageCategory is either an object with name or null
+        imageCategory: (img.imageCategory && typeof img.imageCategory === 'object' && img.imageCategory.name)
+            ? img.imageCategory
+            : null
+    }));
 
     // Set cache headers for better performance (like Unsplash)
     // Cache API responses for 5 minutes, images themselves are cached by Cloudinary
@@ -246,16 +278,29 @@ export const getImagesByUserId = asyncHandler(async (req, res) => {
     );
     const skip = (page - 1) * limit;
 
-    const [images, total] = await Promise.all([
+    const [imagesRaw, total] = await Promise.all([
         Image.find({ uploadedBy: userId })
             .populate('uploadedBy', 'username displayName avatarUrl')
-            .populate('imageCategory', 'name description')
+            .populate({
+                path: 'imageCategory',
+                select: 'name description',
+                justOne: true
+            })
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
             .lean(),
         Image.countDocuments({ uploadedBy: userId }),
     ]);
+
+    // Handle images with invalid or missing category references
+    const images = imagesRaw.map(img => ({
+        ...img,
+        // Ensure imageCategory is either an object with name or null
+        imageCategory: (img.imageCategory && typeof img.imageCategory === 'object' && img.imageCategory.name)
+            ? img.imageCategory
+            : null
+    }));
 
     // Set cache headers for better performance
     res.set('Cache-Control', 'public, max-age=300'); // 5 minutes

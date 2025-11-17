@@ -20,7 +20,7 @@ function AppInitializer({ children }: AppInitializerProps) {
         // You can replace this with a more sophisticated loading spinner
         return (
             <div className="flex h-screen w-full items-center justify-center">
-                <p>Loading...</p>
+                <p>Đang tải trang...</p>
             </div>
         );
     }

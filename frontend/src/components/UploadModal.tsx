@@ -280,7 +280,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                     <div className="confetti-container" id="confetti-container"></div>
                     <div className="success-content">
                         <div className="success-header">
-                            <h1 className="success-title">Thanks for uploading 🎉</h1>
+                            <h1 className="success-title">Thêm ảnh thành công 🎉</h1>
                             <p className="success-subtitle">Our Editorial team is now reviewing your image.</p>
                         </div>
                         <Button
@@ -288,7 +288,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                             onClick={handleViewProfile}
                             size="lg"
                         >
-                            View your profile
+                            Xem trang cá nhân
                             <ArrowRight size={20} />
                         </Button>
                     </div>
@@ -304,10 +304,10 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 <div className="upload-modal" onClick={(e) => e.stopPropagation()}>
                     {/* Header */}
                     <div className="upload-modal-header">
-                        <h2 className="upload-modal-title">Submit to PhotoApp</h2>
-                        <button className="upload-modal-help" onClick={() => window.open('#', '_blank')}>
+                        <h2 className="upload-modal-title">Thêm ảnh vào PhotoApp</h2>
+                        {/* <button className="upload-modal-help" onClick={() => window.open('#', '_blank')}>
                             Need help?
-                        </button>
+                        </button> */}
                         <button className="upload-modal-close" onClick={handleCancel}>
                             <X size={20} />
                         </button>
@@ -327,21 +327,21 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                 <Upload size={64} />
                             </div>
                             <div className="upload-text">
-                                <span className="upload-main-text">Upload a photo</span>
+                                <span className="upload-main-text">Thêm ảnh</span>
                                 <span className="upload-tag">JPEG</span>
                             </div>
                             <div className="upload-text">
-                                <span className="upload-main-text">or illustration</span>
+                                <span className="upload-main-text">hoặc bản vẽ illustration</span>
                                 <span className="upload-tag">SVG</span>
                             </div>
-                            <p className="upload-instruction">Drag and drop up to 8 images or</p>
+                            <p className="upload-instruction">Kẻo thả hoặc</p>
                             <p className="upload-browse">
                                 <button type="button" className="upload-browse-link" onClick={(e) => {
                                     e.stopPropagation();
                                     fileInputRef.current?.click();
-                                }}>Browse</button> to choose a file
+                                }}>Chọn</button> ảnh từ máy tính, điện thoại
                             </p>
-                            <p className="upload-max-size">Max 50 MB</p>
+                            <p className="upload-max-size">Tối 10 MB</p>
                             <input
                                 type="file"
                                 accept="image/*"
@@ -388,10 +388,10 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                             <a href="#" className="footer-link">Read the PhotoApp License</a>
                             <div className="footer-buttons">
                                 <Button type="button" variant="outline" onClick={handleCancel}>
-                                    Cancel
+                                    Huỷ
                                 </Button>
                                 <Button type="button" disabled>
-                                    Submit to PhotoApp
+                                    Tiếp theo
                                 </Button>
                             </div>
                         </div>
@@ -407,10 +407,10 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
             <div className="upload-modal" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
                 <div className="upload-modal-header">
-                    <h2 className="upload-modal-title">Submit to PhotoApp</h2>
-                    <button className="upload-modal-help" onClick={() => window.open('#', '_blank')}>
+                    <h2 className="upload-modal-title">Thêm ảnh vào PhotoApp</h2>
+                    {/* <button className="upload-modal-help" onClick={() => window.open('#', '_blank')}>
                         Need help?
-                    </button>
+                    </button> */}
                     <button className="upload-modal-close" onClick={handleCancel}>
                         <X size={20} />
                     </button>
@@ -429,7 +429,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                             {loading && (
                                 <div className="image-upload-overlay">
                                     <div className="upload-spinner"></div>
-                                    <p className="upload-text">Uploading...</p>
+                                    <p className="upload-text">Đang tải...</p>
                                 </div>
                             )}
                             {!loading && (
@@ -453,21 +453,21 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                     {/* Form Fields */}
                     <form onSubmit={handleSubmit(onSubmit, onError)} className="upload-form-fields">
                         <div className="form-group">
-                            <Label htmlFor="imageTitle">Title</Label>
+                            <Label htmlFor="imageTitle">Tiêu đề</Label>
                             <Input
                                 id="imageTitle"
                                 type="text"
                                 {...register('imageTitle')}
-                                placeholder="Give your photo a title"
+                                placeholder="Thêm tiêu đề cho ảnh của bạn"
                             />
                             {errors.imageTitle && <p className="error-text">{errors.imageTitle.message}</p>}
                         </div>
                         <div className="form-group">
-                            <Label htmlFor="imageCategory">Category</Label>
+                            <Label htmlFor="imageCategory">Danh mục</Label>
                             {loadingCategories ? (
-                                <div style={{ padding: '8px', color: '#666' }}>Loading categories...</div>
+                                <div style={{ padding: '8px', color: '#666' }}>Đang tải danh mục...</div>
                             ) : categories.length === 0 ? (
-                                <div style={{ padding: '8px', color: '#999' }}>No categories available</div>
+                                <div style={{ padding: '8px', color: '#999' }}>Danh mục không tồn tại</div>
                             ) : (
                                 <select
                                     id="imageCategory"
@@ -481,7 +481,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                         backgroundColor: 'white',
                                     }}
                                 >
-                                    <option value="">Select a category...</option>
+                                    <option value="">Chọn một danh mục...</option>
                                     {categories.map((cat) => (
                                         <option key={cat._id} value={cat._id}>
                                             {cat.name}
@@ -492,52 +492,30 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                             {errors.imageCategory && <p className="error-text">{errors.imageCategory.message}</p>}
                         </div>
                         <div className="form-group">
-                            <Label htmlFor="location">Location (Optional)</Label>
+                            <Label htmlFor="location">Vị trí chụp ảnh (không bắt buộc)</Label>
                             <Input
                                 id="location"
                                 type="text"
                                 {...register('location')}
-                                placeholder="e.g., Paris, France"
+                                placeholder="Phú Quốc,..."
                             />
                         </div>
                         <div className="form-group">
-                            <Label htmlFor="cameraModel">Camera Model (Optional)</Label>
+                            <Label htmlFor="cameraModel">Camera Model (không bắt buộc)</Label>
                             <Input
                                 id="cameraModel"
                                 type="text"
                                 {...register('cameraModel')}
-                                placeholder="e.g., Sony A7 III"
+                                placeholder="Sony A7 III,..."
                             />
-                        </div>
-
-                        {/* Guidelines */}
-                        <div className="upload-guidelines">
-                            <div className="guideline-column">
-                                <ul>
-                                    <li>High quality images (for photos, at least 5MP)</li>
-                                    <li>No AI content allowed</li>
-                                </ul>
-                            </div>
-                            <div className="guideline-column">
-                                <ul>
-                                    <li>Only upload images you <strong>own the rights</strong> to</li>
-                                    <li>Zero tolerance for nudity, violence or hate</li>
-                                </ul>
-                            </div>
-                            <div className="guideline-column">
-                                <ul>
-                                    <li>Respect the intellectual property of others</li>
-                                    <li>Read the <a href="#" className="guideline-link">PhotoApp Terms</a></li>
-                                </ul>
-                            </div>
                         </div>
 
                         {/* Footer */}
                         <div className="upload-modal-footer">
-                            <a href="#" className="footer-link">Read the PhotoApp License</a>
+                            <a href="#" className="footer-link"></a>
                             <div className="footer-buttons">
                                 <Button type="button" variant="outline" onClick={handleCancel}>
-                                    Cancel
+                                    Huỷ
                                 </Button>
                                 <div className="submit-button-wrapper">
                                     <Button
@@ -553,11 +531,11 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                             setShowTooltip(false);
                                         }}
                                     >
-                                        {loading ? 'Uploading...' : 'Submit to PhotoApp'}
+                                        {loading ? 'Đang tải...' : 'Gửi'}
                                     </Button>
                                     {showTooltip && !isFormValid && (
                                         <div className="submit-tooltip">
-                                            You not fill all field
+                                            Bạn chưa nhập đủ thông tin
                                         </div>
                                     )}
                                 </div>
