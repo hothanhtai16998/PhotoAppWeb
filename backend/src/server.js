@@ -7,6 +7,7 @@ import authRoute from './routes/authRoute.js';
 import cookieParser from 'cookie-parser';
 import userRoute from './routes/userRoute.js';
 import cors from 'cors';
+import compression from 'compression';
 import imageRoute from './routes/imageRoute.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { apiLimiter } from './middlewares/rateLimiter.js';
@@ -25,6 +26,8 @@ if (env.NODE_ENV === 'production') {
 }
 
 // Middleware
+// Compression middleware - reduces response size for better performance
+app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
@@ -75,10 +78,10 @@ app.use(errorHandler);
 const startServer = async () => {
     try {
         await CONNECT_DB();
-        
+
         // Start session cleanup scheduler
         startSessionCleanup();
-        
+
         const PORT = env.PORT;
         app.listen(PORT, () => {
             logger.info(`🚀 Server is running on port ${PORT}`);

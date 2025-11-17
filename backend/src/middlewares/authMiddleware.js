@@ -21,8 +21,9 @@ export const protectedRoute = asyncHandler(async (req, res, next) => {
         // Verify token
         const decoded = jwt.verify(token, env.ACCESS_TOKEN_SECRET);
 
-        // Find user
-        const user = await User.findById(decoded.userId).select("-hashedPassword");
+        // Find user - using lean() for better performance since we only need data
+        // Note: If you need to modify user later in the request, remove .lean()
+        const user = await User.findById(decoded.userId).select("-hashedPassword").lean();
 
         if (!user) {
             return res.status(404).json({

@@ -8,8 +8,12 @@ import { logger } from '../utils/logger.js';
 export const CONNECT_DB = async () => {
     try {
         const options = {
-            // Use new URL parser and unified topology
-            // These are defaults in newer versions but explicit for clarity
+            // Connection pool settings for better performance
+            maxPoolSize: 10, // Maximum number of connections in the pool
+            minPoolSize: 5, // Minimum number of connections to maintain
+            serverSelectionTimeoutMS: 5000, // How long to try selecting a server
+            socketTimeoutMS: 45000, // How long to wait for socket operations
+            connectTimeoutMS: 10000, // How long to wait for initial connection
         };
 
         await mongoose.connect(env.MONGODB_URI, options);

@@ -2,15 +2,59 @@ import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useImageStore } from '@/stores/useImageStore';
 import { ChevronRight, TrendingUp } from 'lucide-react';
 import type { Image } from '@/types/image';
+import ProgressiveImage from './ProgressiveImage';
 import './ImageGrid.css';
 
 const ImageGrid = () => {
-  const { images, loading, error, fetchImages } = useImageStore();
+  const { images, loading, error, pagination, currentSearch, currentCategory, fetchImages } = useImageStore();
   const trendingSearches = ['School Library', 'Dentist', 'Thanksgiving', 'Christmas Background', 'Dollar', 'Beautiful House'];
+  
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const isLoadingMoreRef = useRef(false);
 
+  // Initial load
   useEffect(() => {
     fetchImages();
   }, [fetchImages]);
+
+  // Infinite scroll: Load more when reaching bottom
+  useEffect(() => {
+    if (!loadMoreRef.current || !pagination) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        
+        // If load more trigger is visible and we have more pages
+        if (
+          entry.isIntersecting &&
+          !loading &&
+          !isLoadingMoreRef.current &&
+          pagination.page < pagination.pages
+        ) {
+          isLoadingMoreRef.current = true;
+          
+          // Load next page with current search/category from store
+          fetchImages({
+            page: pagination.page + 1,
+            search: currentSearch,
+            category: currentCategory,
+          }).finally(() => {
+            isLoadingMoreRef.current = false;
+          });
+        }
+      },
+      {
+        rootMargin: '400px', // Start loading 400px before reaching bottom
+      }
+    );
+
+    observer.observe(loadMoreRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [pagination, loading, fetchImages, currentSearch, currentCategory]);
 
   // Group images by category to create collections
   const collections = useMemo(() => {
@@ -66,7 +110,7 @@ const ImageGrid = () => {
   const attachedHandlers = useRef<WeakMap<HTMLImageElement, boolean>>(new WeakMap());
 
   const handleTrendingClick = (search: string) => {
-    fetchImages({ search });
+    fetchImages({ search, page: 1 });
   };
 
   if (loading && images.length === 0) {
@@ -106,13 +150,23 @@ const ImageGrid = () => {
                   {collection.images.length > 0 && (
                     <>
                       <div className="collection-main-thumb">
-                        <img src={collection.images[0].imageUrl} alt={collection.name} />
+                        <ProgressiveImage
+                          src={collection.images[0].imageUrl}
+                          thumbnailUrl={collection.images[0].thumbnailUrl}
+                          smallUrl={collection.images[0].smallUrl}
+                          alt={collection.name}
+                        />
                       </div>
                       {collection.images.length > 1 && (
                         <div className="collection-side-thumbs">
                           {collection.images.slice(1, 3).map((img, i) => (
                             <div key={i} className="collection-side-thumb">
-                              <img src={img.imageUrl} alt="" />
+                              <ProgressiveImage
+                                src={img.imageUrl}
+                                thumbnailUrl={img.thumbnailUrl}
+                                smallUrl={img.smallUrl}
+                                alt=""
+                              />
                             </div>
                           ))}
                         </div>
@@ -168,35 +222,20 @@ const ImageGrid = () => {
                 className={`masonry-item ${imageType}`}
               >
                 <a href={image.imageUrl} target="_blank" rel="noopener noreferrer" className="masonry-link">
-                  <img
-                    ref={(el) => {
-                      if (!el) return;
-                      // Only process once per image element
-                      if (attachedHandlers.current.has(el)) return;
-                      attachedHandlers.current.set(el, true);
-
-                      // Check if image is already loaded
-                      if (el.complete && el.naturalWidth > 0 && el.naturalHeight > 0) {
-                        if (!processedImages.current.has(image._id) && currentImageIds.has(image._id)) {
-                          handleImageLoad(image._id, el);
-                        }
-                      } else {
-                        // Set up load handler only once with once: true
-                        el.addEventListener('load', () => {
-                          if (!processedImages.current.has(image._id) && currentImageIds.has(image._id)) {
-                            handleImageLoad(image._id, el);
-                          }
-                        }, { once: true });
+                  <ProgressiveImage
+                    src={image.imageUrl}
+                    thumbnailUrl={image.thumbnailUrl}
+                    smallUrl={image.smallUrl}
+                    regularUrl={image.regularUrl}
+                    alt={image.imageTitle || 'Photo'}
+                    onLoad={(img) => {
+                      // Handle image load for aspect ratio detection
+                      if (!processedImages.current.has(image._id) && currentImageIds.has(image._id)) {
+                        handleImageLoad(image._id, img);
                       }
                     }}
-                    src={image.imageUrl}
-                    alt={image.imageTitle || 'Photo'}
-                    loading="lazy"
-                    decoding="async"
                     onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = '/placeholder-image.png';
-                      target.onerror = null;
+                      // Error handling is done in ProgressiveImage component
                     }}
                   />
                   <div className="masonry-overlay">
@@ -243,9 +282,23 @@ const ImageGrid = () => {
           })}
         </div>
       )}
+      {/* Infinite Scroll Trigger - invisible element at bottom */}
+      {pagination && pagination.page < pagination.pages && (
+        <div ref={loadMoreRef} className="infinite-scroll-trigger" />
+      )}
+      
+      {/* Loading indicator */}
       {loading && images.length > 0 && (
         <div className="loading-more">
+          <div className="loading-spinner" />
           <p>Loading more images...</p>
+        </div>
+      )}
+      
+      {/* End of results */}
+      {pagination && pagination.page >= pagination.pages && images.length > 0 && (
+        <div className="end-of-results">
+          <p>You've reached the end</p>
         </div>
       )}
     </div>

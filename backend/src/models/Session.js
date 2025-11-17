@@ -12,6 +12,7 @@ const sessionSchema = new mongoose.Schema(
             type: String,
             required: true,
             unique: true,
+            index: true, // Explicit index for faster lookups
         },
         expiresAt: {
             type: Date,

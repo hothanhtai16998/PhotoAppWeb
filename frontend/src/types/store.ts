@@ -47,6 +47,8 @@ export interface ImageState {
 		total: number;
 		pages: number;
 	} | null;
+	currentSearch?: string;
+	currentCategory?: string;
 	uploadImage: (
 		data: UploadImageData
 	) => Promise<void>;

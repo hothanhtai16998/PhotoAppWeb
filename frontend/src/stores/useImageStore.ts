@@ -14,6 +14,12 @@ export const useImageStore = create(
 		error: null,
 		pagination: null,
 		uploadProgress: 0,
+		currentSearch: undefined as
+			| string
+			| undefined,
+		currentCategory: undefined as
+			| string
+			| undefined,
 		uploadImage: async (
 			data: UploadImageData
 		) => {
@@ -29,7 +35,8 @@ export const useImageStore = create(
 						(progress) => {
 							set((state) => {
 								// Progress tracks HTTP upload (0-90%)
-								state.uploadProgress = progress;
+								state.uploadProgress =
+									progress;
 							});
 						}
 					);
@@ -38,7 +45,7 @@ export const useImageStore = create(
 				set((state) => {
 					state.uploadProgress = 90; // Show we're processing
 				});
-				
+
 				// Backend response received = Cloudinary upload AND processing complete
 				// The response only comes after Cloudinary finishes
 				set((state) => {
@@ -89,16 +96,56 @@ export const useImageStore = create(
 					);
 				set((state) => {
 					// Handle both array response and object with images property
-					if (Array.isArray(response)) {
-						state.images = response;
-						state.pagination = null;
-					} else {
-						state.images =
-							response.images || [];
-						state.pagination =
-							response.pagination ||
-							null;
+					const newImages =
+						Array.isArray(response)
+							? response
+							: response.images || [];
+
+					// Merge strategy: If it's a new search/category, replace. Otherwise, append for pagination
+					const isNewQuery =
+						params?.search !==
+							undefined ||
+						params?.category !==
+							undefined ||
+						params?.page === 1 ||
+						!params?.page;
+
+					// Update current search/category for infinite scroll
+					if (isNewQuery) {
+						state.currentSearch =
+							params?.search;
+						state.currentCategory =
+							params?.category;
 					}
+
+					if (isNewQuery) {
+						// New query - replace images (but browser cache will prevent redownload)
+						state.images = newImages;
+					} else {
+						// Pagination - merge with existing, avoiding duplicates
+						const existingIds = new Set(
+							state.images.map(
+								(img) => img._id
+							)
+						);
+						const uniqueNewImages =
+							newImages.filter(
+								(img) =>
+									!existingIds.has(
+										img._id
+									)
+							);
+						state.images = [
+							...state.images,
+							...uniqueNewImages,
+						];
+					}
+
+					state.pagination =
+						Array.isArray(response)
+							? null
+							: response.pagination ||
+							  null;
 					state.loading = false;
 				});
 			} catch (error: unknown) {

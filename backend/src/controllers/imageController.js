@@ -17,26 +17,40 @@ export const getAllImages = asyncHandler(async (req, res) => {
 
     // Build query
     const query = {};
+    let useTextSearch = false;
+
     if (search) {
-        query.$or = [
-            { imageTitle: { $regex: search, $options: 'i' } },
-            { location: { $regex: search, $options: 'i' } },
-        ];
+        // Use text search for better performance (requires text index)
+        // Text search is much faster than regex for large collections
+        // Note: If text index doesn't exist, MongoDB will throw an error
+        // In that case, the error handler will catch it and you should create the index
+        query.$text = { $search: search };
+        useTextSearch = true;
     }
     if (category) {
         query.imageCategory = category;
     }
 
     // Get images with pagination
+    // Use estimatedDocumentCount for better performance on large collections
+    // Only use countDocuments if we need exact count (e.g., with filters)
     const [images, total] = await Promise.all([
         Image.find(query)
             .populate('uploadedBy', 'username displayName avatarUrl')
-            .sort({ createdAt: -1 })
+            // Sort by text relevance score if using text search, otherwise by date
+            .sort(useTextSearch ? { score: { $meta: 'textScore' }, createdAt: -1 } : { createdAt: -1 })
             .skip(skip)
             .limit(limit)
             .lean(),
-        Image.countDocuments(query),
+        // For filtered queries, we need exact count. For unfiltered, estimated is faster
+        Object.keys(query).length > 0
+            ? Image.countDocuments(query)
+            : Image.estimatedDocumentCount(),
     ]);
+
+    // Set cache headers for better performance (like Unsplash)
+    // Cache API responses for 5 minutes, images themselves are cached by Cloudinary
+    res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
 
     res.status(200).json({
         images,
@@ -83,13 +97,20 @@ export const uploadImage = asyncHandler(async (req, res) => {
                 {
                     folder: 'photo-app-images',
                     resource_type: 'image',
-                    // Optimize images: auto-format and quality for faster uploads
-                    transformation: [
-                        { quality: 'auto:good' }, // Auto quality optimization (reduces file size)
-                        { fetch_format: 'auto' }, // Auto format (WebP when supported, smaller files)
+                    // Generate multiple sizes for progressive loading (like Unsplash)
+                    eager: [
+                        // Thumbnail: 200px width, low quality for blur-up effect
+                        { width: 200, quality: 'auto:low', fetch_format: 'auto', crop: 'limit' },
+                        // Small: 400px width for grid view
+                        { width: 400, quality: 'auto:good', fetch_format: 'auto', crop: 'limit' },
+                        // Regular: 1080px width for detail view
+                        { width: 1080, quality: 'auto:good', fetch_format: 'auto', crop: 'limit' },
                     ],
-                    // Note: Eager transformations removed for faster uploads
-                    // Can be added back if pre-generated sizes are needed
+                    // Main image transformation
+                    transformation: [
+                        { quality: 'auto:good' },
+                        { fetch_format: 'auto' },
+                    ],
                 },
                 (error, result) => {
                     if (error) reject(error);
@@ -101,9 +122,17 @@ export const uploadImage = asyncHandler(async (req, res) => {
             bufferStream.pipe(uploadStream);
         });
 
-        // Save to database (don't wait for populate, do it in parallel if possible)
+        // Extract different size URLs from eager transformations
+        const thumbnailUrl = uploadResponse.eager?.[0]?.secure_url || uploadResponse.secure_url;
+        const smallUrl = uploadResponse.eager?.[1]?.secure_url || uploadResponse.secure_url;
+        const regularUrl = uploadResponse.eager?.[2]?.secure_url || uploadResponse.secure_url;
+
+        // Save to database with multiple image sizes
         const newImage = await Image.create({
-            imageUrl: uploadResponse.secure_url,
+            imageUrl: uploadResponse.secure_url, // Full size (original)
+            thumbnailUrl, // Small thumbnail for blur-up
+            smallUrl, // Small size for grid
+            regularUrl, // Regular size for detail
             publicId: uploadResponse.public_id,
             imageTitle: imageTitle.trim(),
             imageCategory: imageCategory.trim(),
@@ -150,6 +179,9 @@ export const getImagesByUserId = asyncHandler(async (req, res) => {
             .lean(),
         Image.countDocuments({ uploadedBy: userId }),
     ]);
+
+    // Set cache headers for better performance
+    res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
 
     res.status(200).json({
         images,

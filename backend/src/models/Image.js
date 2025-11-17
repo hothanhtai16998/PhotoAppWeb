@@ -18,6 +18,19 @@ const imageSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        // Multiple image sizes for progressive loading (like Unsplash)
+        thumbnailUrl: {
+            type: String,
+            // Optional - will fallback to imageUrl if not set
+        },
+        smallUrl: {
+            type: String,
+            // Optional - will fallback to imageUrl if not set
+        },
+        regularUrl: {
+            type: String,
+            // Optional - will fallback to imageUrl if not set
+        },
         imageCategory: {
             type: String,
             required: true,
@@ -48,6 +61,15 @@ const imageSchema = new mongoose.Schema(
 // Compound index for common queries
 imageSchema.index({ uploadedBy: 1, createdAt: -1 });
 imageSchema.index({ imageCategory: 1, createdAt: -1 });
+
+// Text index for fast full-text search (replaces slow regex queries)
+imageSchema.index({
+    imageTitle: 'text',
+    location: 'text'
+});
+
+// Compound index for search + category queries
+imageSchema.index({ imageCategory: 1, createdAt: -1, imageTitle: 1 });
 
 const Image = mongoose.model('Image', imageSchema);
 
