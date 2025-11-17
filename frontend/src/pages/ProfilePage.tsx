@@ -20,12 +20,12 @@ function ProfilePage() {
     const [illustrationsCount, setIllustrationsCount] = useState(0);
     const [collectionsCount] = useState(1); // Placeholder
 
-    const fetchUserImages = useCallback(async () => {
+    const fetchUserImages = useCallback(async (refresh = false) => {
         if (!user?._id) return;
 
         try {
             setLoading(true);
-            const response = await imageService.fetchUserImages(user._id);
+            const response = await imageService.fetchUserImages(user._id, refresh ? { _refresh: true } : undefined);
             const userImages = response.images || [];
             setImages(userImages);
 
@@ -64,6 +64,22 @@ function ProfilePage() {
 
         fetchUserImages();
     }, [user, navigate, fetchUserImages]);
+
+    // Listen for refresh event after image upload
+    useEffect(() => {
+        const handleRefresh = () => {
+            // Force fresh fetch with cache-busting
+            // Use a small delay to ensure backend has processed the new image
+            setTimeout(() => {
+                fetchUserImages(true); // Pass true to enable cache-busting
+            }, 500);
+        };
+
+        window.addEventListener('refreshProfile', handleRefresh);
+        return () => {
+            window.removeEventListener('refreshProfile', handleRefresh);
+        };
+    }, [fetchUserImages]);
 
     const handleEditProfile = () => {
         navigate('/profile/edit');

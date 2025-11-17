@@ -59,5 +59,6 @@ export interface ImageState {
 		limit?: number;
 		search?: string;
 		category?: string;
+		_refresh?: boolean;
 	}) => Promise<void>;
 }

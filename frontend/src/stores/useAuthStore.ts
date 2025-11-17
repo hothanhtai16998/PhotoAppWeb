@@ -58,7 +58,7 @@ export const useAuthStore =
 							};
 						}
 					)?.response?.data?.message ||
-					'Registration failed. Please try again.';
+					'Đăng ký thất bại. Vui lòng thử lại.';
 				toast.error(message);
 			} finally {
 				set({ loading: false });
@@ -93,7 +93,7 @@ export const useAuthStore =
 				}
 
 				toast.success(
-					'Chào mừng bạn quay lại với Moji 🎉'
+					'Chào mừng bạn quay lại 🎉'
 				);
 			} catch (error: unknown) {
 				const errorResponse = error as {
@@ -130,13 +130,13 @@ export const useAuthStore =
 							)
 							.join(', ');
 					toast.error(
-						`Validation error: ${validationErrors}`
+						`Lỗi xác thực: ${validationErrors}`
 					);
 				} else {
 					const message =
 						errorResponse.response?.data
 							?.message ||
-						'Login failed. Please check your credentials.';
+						'Đăng nhập thất bại. Kiểm tra lại tên tài khoản hoặc mật khẩu của bạn.';
 					toast.error(message);
 				}
 				// Re-throw error so form can handle navigation
@@ -151,7 +151,7 @@ export const useAuthStore =
 				get().clearState();
 				await authService.signOut();
 				toast.success(
-					'Logout thành công!'
+					'Đăng xuất thành công!'
 				);
 			} catch {
 				// Don't show error toast on logout failure
@@ -208,7 +208,7 @@ export const useAuthStore =
 					errorStatus !== 403
 				) {
 					toast.error(
-						'Session expired. Please log in again.'
+						'Session hết hạn. Vui lòng đăng nhập lại.'
 					);
 				}
 				get().clearState();

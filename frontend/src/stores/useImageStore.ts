@@ -120,6 +120,7 @@ export const useImageStore = create(
 			limit?: number;
 			search?: string;
 			category?: string;
+			_refresh?: boolean;
 		}) => {
 			set((state) => {
 				state.loading = true;

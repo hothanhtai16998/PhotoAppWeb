@@ -6,12 +6,12 @@ import { categoryService, type Category } from '@/services/categoryService';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-    LayoutDashboard, 
-    Users, 
-    Images, 
-    Trash2, 
-    Edit2, 
+import {
+    LayoutDashboard,
+    Users,
+    Images,
+    Trash2,
+    Edit2,
     Search,
     Shield,
     UserCog,
@@ -28,13 +28,13 @@ function AdminPage() {
     const [activeTab, setActiveTab] = useState<TabType>('dashboard');
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<DashboardStats | null>(null);
-    
+
     // Users state
     const [users, setUsers] = useState<User[]>([]);
     const [usersPagination, setUsersPagination] = useState({ page: 1, pages: 1, total: 0 });
     const [usersSearch, setUsersSearch] = useState('');
     const [editingUser, setEditingUser] = useState<User | null>(null);
-    
+
     // Images state
     const [images, setImages] = useState<AdminImage[]>([]);
     const [imagesPagination, setImagesPagination] = useState({ page: 1, pages: 1, total: 0 });
@@ -56,7 +56,7 @@ function AdminPage() {
                 await fetchMe();
                 const currentUser = useAuthStore.getState().user;
                 if (!currentUser?.isAdmin && !currentUser?.isSuperAdmin) {
-                    toast.error('Admin access required');
+                    toast.error('Cần quyền Admin để truy cập trang này.');
                     navigate('/');
                     return;
                 }
@@ -122,46 +122,46 @@ function AdminPage() {
             setImages(data.images);
             setImagesPagination(data.pagination);
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to load images');
+            toast.error(error.response?.data?.message || 'Lỗi khi lấy ảnh');
         } finally {
             setLoading(false);
         }
     };
 
     const handleDeleteUser = async (userId: string, username: string) => {
-        if (!confirm(`Are you sure you want to delete user "${username}"? This will also delete all their images.`)) {
+        if (!confirm(`Bạn có muốn xoá người dùng "${username}" không? Sẽ xoá cả ảnh mà người này đã đăng.`)) {
             return;
         }
 
         try {
             await adminService.deleteUser(userId);
-            toast.success('User deleted successfully');
+            toast.success('Xoá người dùng thành công');
             loadUsers(usersPagination.page);
             if (activeTab === 'dashboard') loadDashboardStats();
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to delete user');
+            toast.error(error.response?.data?.message || 'Lỗi khi xoá người dùng');
         }
     };
 
     const handleDeleteImage = async (imageId: string, imageTitle: string) => {
-        if (!confirm(`Are you sure you want to delete image "${imageTitle}"?`)) {
+        if (!confirm(`Bán có muốn xoá ảnh "${imageTitle}" không?`)) {
             return;
         }
 
         try {
             await adminService.deleteImage(imageId);
-            toast.success('Image deleted successfully');
+            toast.success('Xoá ảnh thành công');
             loadImages(imagesPagination.page);
             if (activeTab === 'dashboard') loadDashboardStats();
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to delete image');
+            toast.error(error.response?.data?.message || 'Lỗi khi xoá ảnh');
         }
     };
 
     const handleUpdateUser = async (userId: string, updates: Partial<User>) => {
         try {
             await adminService.updateUser(userId, updates);
-            toast.success('User updated successfully');
+            toast.success('Cập nhật thông tin người dùng thành công');
             setEditingUser(null);
             loadUsers(usersPagination.page);
             if (activeTab === 'dashboard') loadDashboardStats();
@@ -177,7 +177,7 @@ function AdminPage() {
             const data = await categoryService.getAllCategoriesAdmin();
             setCategories(data);
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to load categories');
+            toast.error(error.response?.data?.message || 'Lỗi khi lấy danh mục');
         } finally {
             setLoading(false);
         }
@@ -186,36 +186,36 @@ function AdminPage() {
     const handleCreateCategory = async (data: { name: string; description?: string }) => {
         try {
             await categoryService.createCategory(data);
-            toast.success('Category created successfully');
+            toast.success('Tạo danh mục thành công');
             setCreatingCategory(false);
             loadCategories();
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to create category');
+            toast.error(error.response?.data?.message || 'Lỗi khi tạo danh mục');
         }
     };
 
     const handleUpdateCategory = async (categoryId: string, updates: { name?: string; description?: string; isActive?: boolean }) => {
         try {
             await categoryService.updateCategory(categoryId, updates);
-            toast.success('Category updated successfully');
+            toast.success('Danh mục đã được cập nhật thành công');
             setEditingCategory(null);
             loadCategories();
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to update category');
+            toast.error(error.response?.data?.message || 'Lỗi khi cập nhật danh mục');
         }
     };
 
     const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
-        if (!confirm(`Are you sure you want to delete category "${categoryName}"? This will only work if no images are using this category.`)) {
+        if (!confirm(`Bạn có muốn xoá danh mục "${categoryName}" không? Chỉ xoá được nếu không có ảnh nào thuộc loại danh mục này.`)) {
             return;
         }
 
         try {
             await categoryService.deleteCategory(categoryId);
-            toast.success('Category deleted successfully');
+            toast.success('Xoá danh mục thành công');
             loadCategories();
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to delete category');
+            toast.error(error.response?.data?.message || 'Lỗi khi xoá danh mục');
         }
     };
 
@@ -230,7 +230,7 @@ function AdminPage() {
                 await loadUsers(1);
             }
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to load admin roles');
+            toast.error(error.response?.data?.message || 'Lỗi khi lấy danh sách quyền admin');
         } finally {
             setLoading(false);
         }
@@ -239,38 +239,38 @@ function AdminPage() {
     const handleCreateRole = async (data: { userId: string; role: string; permissions: any }) => {
         try {
             await adminService.createAdminRole(data);
-            toast.success('Admin role created successfully');
+            toast.success('Quyền admin đã được tạo thành công');
             setCreatingRole(false);
             loadAdminRoles();
             loadUsers(usersPagination.page);
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to create admin role');
+            toast.error(error.response?.data?.message || 'Lỗi khi tạo quyền admin');
         }
     };
 
     const handleUpdateRole = async (userId: string, updates: { role?: string; permissions?: any }) => {
         try {
             await adminService.updateAdminRole(userId, updates);
-            toast.success('Admin role updated successfully');
+            toast.success('Quyền admin đã được cập nhật thành công');
             setEditingRole(null);
             loadAdminRoles();
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to update admin role');
+            toast.error(error.response?.data?.message || 'Lỗi khi cập nhật quyền admin');
         }
     };
 
     const handleDeleteRole = async (userId: string, username: string) => {
-        if (!confirm(`Are you sure you want to remove admin role from "${username}"?`)) {
+        if (!confirm(`Bạn có muốn xoá quyền ad của tài khoản "${username}" không?`)) {
             return;
         }
 
         try {
             await adminService.deleteAdminRole(userId);
-            toast.success('Admin role removed successfully');
+            toast.success('Quyền admin đã được xoá thành công');
             loadAdminRoles();
             loadUsers(usersPagination.page);
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to remove admin role');
+            toast.error(error.response?.data?.message || 'Lỗi khi xoá quyền admin');
         }
     };
 
@@ -287,7 +287,7 @@ function AdminPage() {
                     <div className="admin-sidebar">
                         <div className="admin-sidebar-header">
                             <Shield size={24} />
-                            <h2>Admin Panel</h2>
+                            <h2>Trang quản lý</h2>
                         </div>
                         <nav className="admin-nav">
                             <button
@@ -302,21 +302,21 @@ function AdminPage() {
                                 onClick={() => setActiveTab('users')}
                             >
                                 <Users size={20} />
-                                Users
+                                Người dùng
                             </button>
                             <button
                                 className={`admin-nav-item ${activeTab === 'images' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('images')}
                             >
                                 <Images size={20} />
-                                Images
+                                Ảnh
                             </button>
                             <button
                                 className={`admin-nav-item ${activeTab === 'categories' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('categories')}
                             >
                                 <Tag size={20} />
-                                Categories
+                                Danh mục ảnh
                             </button>
                             {user?.isSuperAdmin && (
                                 <button
@@ -324,7 +324,7 @@ function AdminPage() {
                                     onClick={() => setActiveTab('roles')}
                                 >
                                     <UserCog size={20} />
-                                    Admin Roles
+                                    Quyền quản trị
                                 </button>
                             )}
                         </nav>
@@ -333,24 +333,24 @@ function AdminPage() {
                     {/* Main Content */}
                     <div className="admin-content">
                         {loading && activeTab === 'dashboard' ? (
-                            <div className="admin-loading">Loading...</div>
+                            <div className="admin-loading">Đang tải...</div>
                         ) : activeTab === 'dashboard' && stats ? (
                             <div className="admin-dashboard">
                                 <h1 className="admin-title">Dashboard</h1>
-                                
+
                                 {/* Stats Cards */}
                                 <div className="admin-stats-grid">
                                     <div className="admin-stat-card">
                                         <div className="admin-stat-value">{stats.stats.totalUsers}</div>
-                                        <div className="admin-stat-label">Total Users</div>
+                                        <div className="admin-stat-label">Tổng số lượng người dùngn</div>
                                     </div>
                                     <div className="admin-stat-card">
                                         <div className="admin-stat-value">{stats.stats.totalImages}</div>
-                                        <div className="admin-stat-label">Total Images</div>
+                                        <div className="admin-stat-label">Tổng số lượng ảnh</div>
                                     </div>
                                     <div className="admin-stat-card">
                                         <div className="admin-stat-value">{stats.stats.categoryStats.length}</div>
-                                        <div className="admin-stat-label">Categories</div>
+                                        <div className="admin-stat-label">Danh mục</div>
                                     </div>
                                 </div>
 
@@ -369,16 +369,16 @@ function AdminPage() {
 
                                 {/* Recent Users */}
                                 <div className="admin-section">
-                                    <h2 className="admin-section-title">Recent Users</h2>
+                                    <h2 className="admin-section-title">Người dùng được tạo gần đây</h2>
                                     <div className="admin-table">
                                         <table>
                                             <thead>
                                                 <tr>
-                                                    <th>Username</th>
+                                                    <th>Tên tài khoản</th>
                                                     <th>Email</th>
-                                                    <th>Name</th>
-                                                    <th>Admin</th>
-                                                    <th>Joined</th>
+                                                    <th>Họ và tên</th>
+                                                    <th>Quyền Admin</th>
+                                                    <th>Ngày tham gia</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -406,24 +406,30 @@ function AdminPage() {
 
                                 {/* Recent Images */}
                                 <div className="admin-section">
-                                    <h2 className="admin-section-title">Recent Images</h2>
+                                    <h2 className="admin-section-title">Ảnh được thêm gần đây</h2>
                                     <div className="admin-table">
                                         <table>
                                             <thead>
                                                 <tr>
-                                                    <th>Title</th>
-                                                    <th>Category</th>
-                                                    <th>Uploaded By</th>
-                                                    <th>Date</th>
+                                                    <th>Tiêu đề</th>
+                                                    {/* <th>Ảnh thumbnail</th> */}
+                                                    <th>Danh mục</th>
+                                                    <th>Người đăng</th>
+                                                    <th>Ngày đăng</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {stats.recentImages.map((img) => (
                                                     <tr key={img._id}>
                                                         <td>{img.imageTitle}</td>
+                                                        {/* <td>
+                                                            <img
+                                                                src={img.imageUrl}
+                                                                alt={img.imageTitle}
+                                                            /></td> */}
                                                         <td>
-                                                            {typeof img.imageCategory === 'string' 
-                                                                ? img.imageCategory 
+                                                            {typeof img.imageCategory === 'string'
+                                                                ? img.imageCategory
                                                                 : img.imageCategory?.name || 'Unknown'}
                                                         </td>
                                                         <td>{img.uploadedBy?.displayName || img.uploadedBy?.username}</td>
@@ -438,11 +444,11 @@ function AdminPage() {
                         ) : activeTab === 'users' ? (
                             <div className="admin-users">
                                 <div className="admin-header">
-                                    <h1 className="admin-title">User Management</h1>
+                                    <h1 className="admin-title">Quản lý người dùng</h1>
                                     <div className="admin-search">
                                         <Search size={20} />
                                         <Input
-                                            placeholder="Search users..."
+                                            placeholder="Nhập tên tài khoản..."
                                             value={usersSearch}
                                             onChange={(e) => setUsersSearch(e.target.value)}
                                             onKeyDown={(e) => {
@@ -451,7 +457,7 @@ function AdminPage() {
                                                 }
                                             }}
                                         />
-                                        <Button onClick={() => loadUsers(1)}>Search</Button>
+                                        <Button onClick={() => loadUsers(1)}>Tìm</Button>
                                     </div>
                                 </div>
 
@@ -459,11 +465,11 @@ function AdminPage() {
                                     <table>
                                         <thead>
                                             <tr>
-                                                <th>Username</th>
+                                                <th>Tên tài khoản</th>
                                                 <th>Email</th>
-                                                <th>Display Name</th>
-                                                <th>Admin</th>
-                                                <th>Images</th>
+                                                <th>Họ và tên</th>
+                                                <th>Quyền Admin</th>
+                                                <th>Ảnh</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -525,16 +531,16 @@ function AdminPage() {
                                             disabled={usersPagination.page === 1}
                                             onClick={() => loadUsers(usersPagination.page - 1)}
                                         >
-                                            Previous
+                                            Quay lại
                                         </Button>
                                         <span>
-                                            Page {usersPagination.page} of {usersPagination.pages}
+                                            Trang {usersPagination.page} trên {usersPagination.pages}
                                         </span>
                                         <Button
                                             disabled={usersPagination.page === usersPagination.pages}
                                             onClick={() => loadUsers(usersPagination.page + 1)}
                                         >
-                                            Next
+                                            Tiếp theo
                                         </Button>
                                     </div>
                                 )}
@@ -550,11 +556,11 @@ function AdminPage() {
                         ) : activeTab === 'images' ? (
                             <div className="admin-images">
                                 <div className="admin-header">
-                                    <h1 className="admin-title">Image Management</h1>
+                                    <h1 className="admin-title">Quản lý hình ảnh</h1>
                                     <div className="admin-search">
                                         <Search size={20} />
                                         <Input
-                                            placeholder="Search images..."
+                                            placeholder="Nhập tên ảnh..."
                                             value={imagesSearch}
                                             onChange={(e) => setImagesSearch(e.target.value)}
                                             onKeyDown={(e) => {
@@ -563,7 +569,7 @@ function AdminPage() {
                                                 }
                                             }}
                                         />
-                                        <Button onClick={() => loadImages(1)}>Search</Button>
+                                        <Button onClick={() => loadImages(1)}>Tìm</Button>
                                     </div>
                                 </div>
 
@@ -573,16 +579,17 @@ function AdminPage() {
                                             <img src={img.imageUrl} alt={img.imageTitle} />
                                             <div className="admin-image-info">
                                                 <h3>{img.imageTitle}</h3>
-                                                <p>Category: {typeof img.imageCategory === 'string' 
-                                                    ? img.imageCategory 
+                                                <p>Danh mục: {typeof img.imageCategory === 'string'
+                                                    ? img.imageCategory
                                                     : img.imageCategory?.name || 'Unknown'}</p>
-                                                <p>By: {img.uploadedBy.displayName || img.uploadedBy.username}</p>
+                                                <p>Người đăng: {img.uploadedBy.displayName || img.uploadedBy.username}</p>
+                                                <p>Ngày đăng: {img.createdAt}</p>
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => handleDeleteImage(img._id, img.imageTitle)}
                                                 >
-                                                    <Trash2 size={16} /> Delete
+                                                    <Trash2 size={16} /> Xoá
                                                 </Button>
                                             </div>
                                         </div>
@@ -595,16 +602,16 @@ function AdminPage() {
                                             disabled={imagesPagination.page === 1}
                                             onClick={() => loadImages(imagesPagination.page - 1)}
                                         >
-                                            Previous
+                                            Quay lại
                                         </Button>
                                         <span>
-                                            Page {imagesPagination.page} of {imagesPagination.pages}
+                                            Trang {imagesPagination.page} trên {imagesPagination.pages}
                                         </span>
                                         <Button
                                             disabled={imagesPagination.page === imagesPagination.pages}
                                             onClick={() => loadImages(imagesPagination.page + 1)}
                                         >
-                                            Next
+                                            Tiếp theo
                                         </Button>
                                     </div>
                                 )}
@@ -612,9 +619,9 @@ function AdminPage() {
                         ) : activeTab === 'categories' ? (
                             <div className="admin-categories">
                                 <div className="admin-header">
-                                    <h1 className="admin-title">Category Management</h1>
+                                    <h1 className="admin-title">Quản lý danh mục</h1>
                                     <Button onClick={() => setCreatingCategory(true)}>
-                                        + Create Category
+                                        + Thêm danh mục
                                     </Button>
                                 </div>
 
@@ -622,10 +629,10 @@ function AdminPage() {
                                     <table>
                                         <thead>
                                             <tr>
-                                                <th>Name</th>
-                                                <th>Description</th>
-                                                <th>Images</th>
-                                                <th>Status</th>
+                                                <th>Tên</th>
+                                                <th>Mô tả</th>
+                                                <th>Số lượng ảnh hiện tại</th>
+                                                <th>Trạng thái</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -637,7 +644,7 @@ function AdminPage() {
                                                     <td>{cat.imageCount || 0}</td>
                                                     <td>
                                                         <span className={`admin-status-badge ${cat.isActive ? 'admin' : 'none'}`}>
-                                                            {cat.isActive ? 'Active' : 'Inactive'}
+                                                            {cat.isActive ? 'Đang kích hoạt' : 'Inactive'}
                                                         </span>
                                                     </td>
                                                     <td>
@@ -666,7 +673,7 @@ function AdminPage() {
 
                                 {categories.length === 0 && (
                                     <div className="admin-empty-state">
-                                        <p>No categories found. Create one to get started.</p>
+                                        <p>Không tìm thấy danh mục. Vui lòng tạo mới.</p>
                                     </div>
                                 )}
 
@@ -688,9 +695,9 @@ function AdminPage() {
                         ) : activeTab === 'roles' && user?.isSuperAdmin ? (
                             <div className="admin-roles">
                                 <div className="admin-header">
-                                    <h1 className="admin-title">Admin Role Management</h1>
+                                    <h1 className="admin-title">Quyền quản trị Admin</h1>
                                     <Button onClick={() => setCreatingRole(true)}>
-                                        + Create Admin Role
+                                        + Thêm quyền Admin
                                     </Button>
                                 </div>
 
@@ -698,10 +705,10 @@ function AdminPage() {
                                     <table>
                                         <thead>
                                             <tr>
-                                                <th>User</th>
-                                                <th>Role</th>
-                                                <th>Permissions</th>
-                                                <th>Granted By</th>
+                                                <th>Tên tài khoản</th>
+                                                <th>Vai trò</th>
+                                                <th>Quyền hạn</th>
+                                                <th>Người cấp</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -722,7 +729,7 @@ function AdminPage() {
                                                     </td>
                                                     <td>
                                                         <div className="admin-permissions-list">
-                                                            {Object.entries(role.permissions || {}).map(([key, value]) => 
+                                                            {Object.entries(role.permissions || {}).map(([key, value]) =>
                                                                 value ? (
                                                                     <span key={key} className="admin-permission-tag">
                                                                         {key}
@@ -761,7 +768,7 @@ function AdminPage() {
 
                                 {adminRoles.length === 0 && (
                                     <div className="admin-empty-state">
-                                        <p>No admin roles found. Create one to delegate admin permissions.</p>
+                                        <p>Chưa có quyền admin. Vui lòng tạo mới</p>
                                     </div>
                                 )}
 
@@ -812,12 +819,12 @@ function UserEditModal({
         <div className="admin-modal-overlay" onClick={onClose}>
             <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="admin-modal-header">
-                    <h2>Edit User</h2>
+                    <h2>Chỉnh sửa thông tin</h2>
                     <button onClick={onClose}>×</button>
                 </div>
                 <form onSubmit={handleSubmit} className="admin-modal-form">
                     <div className="admin-form-group">
-                        <label>Display Name</label>
+                        <label>Họ và tên</label>
                         <Input
                             value={displayName}
                             onChange={(e) => setDisplayName(e.target.value)}
@@ -843,9 +850,9 @@ function UserEditModal({
                     </div>
                     <div className="admin-modal-actions">
                         <Button type="button" variant="outline" onClick={onClose}>
-                            Cancel
+                            Huỷ
                         </Button>
-                        <Button type="submit">Save</Button>
+                        <Button type="submit">Lưu</Button>
                     </div>
                 </form>
             </div>
@@ -878,7 +885,7 @@ function CreateRoleModal({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedUserId) {
-            toast.error('Please select a user');
+            toast.error('Vui lòng chọn tài khoản để tạo quyền admin.');
             return;
         }
         await onSave({ userId: selectedUserId, role, permissions });
@@ -888,19 +895,19 @@ function CreateRoleModal({
         <div className="admin-modal-overlay" onClick={onClose}>
             <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="admin-modal-header">
-                    <h2>Create Admin Role</h2>
+                    <h2>Thêm quyền admin</h2>
                     <button onClick={onClose}>×</button>
                 </div>
                 <form onSubmit={handleSubmit} className="admin-modal-form">
                     <div className="admin-form-group">
-                        <label>Select User</label>
+                        <label>Chọn tài khoản</label>
                         <select
                             value={selectedUserId}
                             onChange={(e) => setSelectedUserId(e.target.value)}
                             required
                             className="admin-select"
                         >
-                            <option value="">Choose a user...</option>
+                            <option value="">Vui lòng chọn tải khoản...</option>
                             {users.filter(u => !u.isAdmin && !u.isSuperAdmin).map((u) => (
                                 <option key={u._id} value={u._id}>
                                     {u.displayName} ({u.username})
@@ -910,19 +917,19 @@ function CreateRoleModal({
                     </div>
 
                     <div className="admin-form-group">
-                        <label>Role</label>
+                        <label>Vai trò</label>
                         <select
                             value={role}
                             onChange={(e) => setRole(e.target.value)}
                             className="admin-select"
                         >
                             <option value="admin">Admin</option>
-                            <option value="moderator">Moderator</option>
+                            <option value="moderator">Mod</option>
                         </select>
                     </div>
 
                     <div className="admin-form-group">
-                        <label>Permissions</label>
+                        <label>Quyền hạn</label>
                         <div className="admin-permissions-checkboxes">
                             {Object.entries(permissions).map(([key, value]) => (
                                 <label key={key} className="admin-checkbox-label">
@@ -940,9 +947,9 @@ function CreateRoleModal({
 
                     <div className="admin-modal-actions">
                         <Button type="button" variant="outline" onClick={onClose}>
-                            Cancel
+                            Huỷ
                         </Button>
-                        <Button type="submit">Create Role</Button>
+                        <Button type="submit">Thêm</Button>
                     </div>
                 </form>
             </div>
@@ -972,12 +979,12 @@ function EditRoleModal({
         <div className="admin-modal-overlay" onClick={onClose}>
             <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="admin-modal-header">
-                    <h2>Edit Admin Role</h2>
+                    <h2>Sửa quyền admin</h2>
                     <button onClick={onClose}>×</button>
                 </div>
                 <form onSubmit={handleSubmit} className="admin-modal-form">
                     <div className="admin-form-group">
-                        <label>User</label>
+                        <label>Tài khoản admin</label>
                         <Input
                             value={role.userId?.displayName || role.userId?.username || ''}
                             disabled
@@ -985,25 +992,25 @@ function EditRoleModal({
                     </div>
 
                     <div className="admin-form-group">
-                        <label>Role</label>
+                        <label>Vai trò</label>
                         <select
                             value={selectedRole}
                             onChange={(e) => setSelectedRole(e.target.value)}
                             className="admin-select"
                         >
                             <option value="admin">Admin</option>
-                            <option value="moderator">Moderator</option>
+                            <option value="moderator">Mod</option>
                         </select>
                     </div>
 
                     <div className="admin-form-group">
-                        <label>Permissions</label>
+                        <label>Quyền hạn</label>
                         <div className="admin-permissions-checkboxes">
-                            {Object.entries(permissions).map(([key, value]) => (
+                            {Object.entries(allPermissions).map(([key]) => (
                                 <label key={key} className="admin-checkbox-label">
                                     <input
                                         type="checkbox"
-                                        checked={value as boolean}
+                                        checked={permissions[key] || false}
                                         onChange={(e) => setPermissions({ ...permissions, [key]: e.target.checked })}
                                         disabled={key === 'viewDashboard'}
                                     />
@@ -1015,9 +1022,9 @@ function EditRoleModal({
 
                     <div className="admin-modal-actions">
                         <Button type="button" variant="outline" onClick={onClose}>
-                            Cancel
+                            Huỷ
                         </Button>
-                        <Button type="submit">Save Changes</Button>
+                        <Button type="submit">Lưu</Button>
                     </div>
                 </form>
             </div>
@@ -1049,33 +1056,33 @@ function CreateCategoryModal({
         <div className="admin-modal-overlay" onClick={onClose}>
             <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="admin-modal-header">
-                    <h2>Create Category</h2>
+                    <h2>Thêm danh mục mới</h2>
                     <button onClick={onClose}>×</button>
                 </div>
                 <form onSubmit={handleSubmit} className="admin-modal-form">
                     <div className="admin-form-group">
-                        <label>Category Name *</label>
+                        <label>Tên danh mục</label>
                         <Input
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required
-                            placeholder="e.g., Nature, Portrait, Architecture"
+                            placeholder="Chân dung, phong cảnh, sự kiện,..."
                         />
                     </div>
                     <div className="admin-form-group">
-                        <label>Description</label>
+                        <label>Mô tả</label>
                         <textarea
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             rows={3}
-                            placeholder="Optional description for this category"
+                            placeholder="Thêm mô tả cho danh mục hoặc bỏ trống"
                         />
                     </div>
                     <div className="admin-modal-actions">
                         <Button type="button" variant="outline" onClick={onClose}>
-                            Cancel
+                            Huỷ
                         </Button>
-                        <Button type="submit">Create</Button>
+                        <Button type="submit">Tạo</Button>
                     </div>
                 </form>
             </div>
@@ -1100,7 +1107,7 @@ function EditCategoryModal({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name.trim()) {
-            toast.error('Category name is required');
+            toast.error('Cần có tên danh mục');
             return;
         }
         await onSave(category._id, {
@@ -1114,23 +1121,23 @@ function EditCategoryModal({
         <div className="admin-modal-overlay" onClick={onClose}>
             <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="admin-modal-header">
-                    <h2>Edit Category</h2>
+                    <h2>Chỉnh sửa danh mục</h2>
                     <button onClick={onClose}>×</button>
                 </div>
                 <form onSubmit={handleSubmit} className="admin-modal-form">
                     <div className="admin-form-group">
-                        <label>Category Name *</label>
+                        <label>Tên danh mục</label>
                         <Input
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required
                         />
                         <small style={{ color: '#666', marginTop: '4px', display: 'block' }}>
-                            Changing the name will update all images using this category.
+                            Thay đổi tên danh mục sẽ cập nhật tất cả các ảnh đã đăng tại danh mục này.
                         </small>
                     </div>
                     <div className="admin-form-group">
-                        <label>Description</label>
+                        <label>Mô tả</label>
                         <textarea
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
@@ -1144,14 +1151,14 @@ function EditCategoryModal({
                                 checked={isActive}
                                 onChange={(e) => setIsActive(e.target.checked)}
                             />
-                            Active
+                            Đang kích hoạt
                         </label>
                     </div>
                     <div className="admin-modal-actions">
                         <Button type="button" variant="outline" onClick={onClose}>
-                            Cancel
+                            Huỷ
                         </Button>
-                        <Button type="submit">Save Changes</Button>
+                        <Button type="submit">Lưu</Button>
                     </div>
                 </form>
             </div>

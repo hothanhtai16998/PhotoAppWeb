@@ -17,6 +17,34 @@ const ImageGrid = () => {
     fetchImages();
   }, [fetchImages]);
 
+  // Listen for refresh event after image upload
+  useEffect(() => {
+    const handleRefresh = (event: Event) => {
+      // Reset to first page and fetch fresh images with cache-busting
+      // Preserve current category and search filters
+      // Use a small delay to ensure backend has processed the new image
+      const customEvent = event as CustomEvent;
+      const categoryFromEvent = customEvent?.detail?.category;
+      
+      setTimeout(() => {
+        // Use category from event if provided, otherwise use currentCategory from store
+        // The event detail contains the category ID, but we need the name for filtering
+        // So we'll use currentCategory which should be the name
+        fetchImages({ 
+          page: 1, 
+          _refresh: true,
+          category: currentCategory || undefined,
+          search: currentSearch || undefined,
+        });
+      }, 500);
+    };
+
+    window.addEventListener('refreshImages', handleRefresh);
+    return () => {
+      window.removeEventListener('refreshImages', handleRefresh);
+    };
+  }, [fetchImages, currentCategory, currentSearch]);
+
   // Infinite scroll: Load more when reaching bottom
   useEffect(() => {
     if (!loadMoreRef.current || !pagination) return;

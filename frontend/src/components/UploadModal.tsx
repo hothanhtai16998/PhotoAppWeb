@@ -148,6 +148,15 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
             setShowProgress(false);
             setShowSuccess(true);
+
+            // Dispatch refresh event immediately after successful upload
+            // This will trigger ProfilePage and ImageGrid to refresh
+            window.dispatchEvent(new CustomEvent('refreshProfile'));
+            // Dispatch refresh with category info if available
+            const refreshEvent = new CustomEvent('refreshImages', {
+                detail: { category: data.imageCategory }
+            });
+            window.dispatchEvent(refreshEvent);
         } catch {
             setShowProgress(false);
             setShowSuccess(false);
@@ -165,6 +174,8 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         setShowSuccess(false);
         setShowProgress(false);
         onClose();
+        // Dispatch custom event to trigger image refresh
+        window.dispatchEvent(new CustomEvent('refreshProfile'));
         navigate('/profile');
     };
 

@@ -102,8 +102,15 @@ export const getAllImages = asyncHandler(async (req, res) => {
     }));
 
     // Set cache headers for better performance (like Unsplash)
-    // Cache API responses for 5 minutes, images themselves are cached by Cloudinary
-    res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
+    // Check if there's a cache-busting parameter
+    const hasCacheBust = req.query._t;
+    if (hasCacheBust) {
+        // If cache-busting is requested, use no-cache
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    } else {
+        // Otherwise, cache API responses for 5 minutes, images themselves are cached by Cloudinary
+        res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
+    }
 
     res.status(200).json({
         images,
@@ -303,7 +310,16 @@ export const getImagesByUserId = asyncHandler(async (req, res) => {
     }));
 
     // Set cache headers for better performance
-    res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
+    // Use shorter cache for user-specific images since they change more frequently
+    // Check if there's a cache-busting parameter
+    const hasCacheBust = req.query._t;
+    if (hasCacheBust) {
+        // If cache-busting is requested, use no-cache
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    } else {
+        // Otherwise, cache for 30 seconds (shorter than public images)
+        res.set('Cache-Control', 'public, max-age=30');
+    }
 
     res.status(200).json({
         images,

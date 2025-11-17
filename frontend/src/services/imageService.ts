@@ -83,7 +83,7 @@ export const imageService = {
 	},
 
 	fetchImages: async (
-		params?: FetchImagesParams
+		params?: FetchImagesParams & { _refresh?: boolean }
 	): Promise<FetchImagesResponse> => {
 		const queryParams =
 			new URLSearchParams();
@@ -112,6 +112,11 @@ export const imageService = {
 				params.category
 			);
 		}
+		
+		// Add cache-busting timestamp if refresh is requested
+		if (params?._refresh) {
+			queryParams.append('_t', Date.now().toString());
+		}
 
 		const queryString =
 			queryParams.toString();
@@ -121,6 +126,8 @@ export const imageService = {
 
 		const res = await api.get(url, {
 			withCredentials: true,
+			// Force fresh fetch by bypassing cache
+			headers: params?._refresh ? { 'Cache-Control': 'no-cache' } : undefined,
 		});
 
 		// Handle both old format (just images array) and new format (with pagination)
@@ -132,7 +139,7 @@ export const imageService = {
 
 	fetchUserImages: async (
 		userId: string,
-		params?: FetchImagesParams
+		params?: FetchImagesParams & { _refresh?: boolean }
 	): Promise<FetchImagesResponse> => {
 		const queryParams = new URLSearchParams();
 
@@ -142,6 +149,11 @@ export const imageService = {
 		if (params?.limit) {
 			queryParams.append('limit', params.limit.toString());
 		}
+		
+		// Add cache-busting timestamp if refresh is requested
+		if (params?._refresh) {
+			queryParams.append('_t', Date.now().toString());
+		}
 
 		const queryString = queryParams.toString();
 		const url = queryString
@@ -150,6 +162,8 @@ export const imageService = {
 
 		const res = await api.get(url, {
 			withCredentials: true,
+			// Force fresh fetch by bypassing cache
+			headers: params?._refresh ? { 'Cache-Control': 'no-cache' } : undefined,
 		});
 
 		if (res.data.images) {

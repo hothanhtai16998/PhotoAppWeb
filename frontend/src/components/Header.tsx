@@ -59,6 +59,28 @@ export const Header = memo(function Header() {
     }
   }, [searchQuery, activeCategory, fetchImages, location.pathname])
 
+  // Listen for refresh event after image upload and re-fetch with current category
+  useEffect(() => {
+    const handleRefresh = () => {
+      if (location.pathname === '/') {
+        // Re-fetch with current active category to show newly uploaded image
+        setTimeout(() => {
+          fetchImages({
+            page: 1,
+            _refresh: true,
+            category: activeCategory !== 'Tất cả' ? activeCategory : undefined,
+            search: searchQuery || undefined,
+          })
+        }, 500)
+      }
+    }
+
+    window.addEventListener('refreshImages', handleRefresh)
+    return () => {
+      window.removeEventListener('refreshImages', handleRefresh)
+    }
+  }, [activeCategory, searchQuery, fetchImages, location.pathname])
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (location.pathname !== '/') {
