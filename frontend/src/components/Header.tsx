@@ -67,26 +67,23 @@ export const Header = memo(function Header() {
         const customEvent = event as CustomEvent;
         const uploadedCategoryName = customEvent?.detail?.categoryName;
         
-        // Determine which category to use for refresh:
-        // 1. If user has "Tất cả" selected, refresh with no category (show all images)
-        // 2. If user has a specific category selected, use that category
-        // 3. The uploaded image will be preserved in store even if category doesn't match
-        const categoryToUse = activeCategory !== 'Tất cả' ? activeCategory : undefined;
-        
-        // Re-fetch with the appropriate category to show newly uploaded image
-        // Use a longer delay to ensure backend has fully processed the image
+        // After upload, the image is already in the store (added by uploadImage)
+        // We just need to ensure it's visible by refreshing with the correct filter
+        // If user has "Tất cả" selected, refresh with no filter
+        // If user has a specific category, refresh with that category (the uploaded image should match)
         setTimeout(() => {
           fetchImages({
             page: 1,
             _refresh: true,
-            category: categoryToUse,
+            // Use current category - if "Tất cả", show all; otherwise filter by category
+            category: activeCategory !== 'Tất cả' ? activeCategory : undefined,
             search: searchQuery || undefined,
           }).catch((error) => {
             console.error('Error refreshing images after upload:', error);
             // Silently fail - don't show error toast as this is just a refresh
-            // The user can manually refresh if needed
+            // The uploaded image is already in the store and visible
           });
-        }, 1000) // Increased delay to ensure backend has processed
+        }, 2000) // Increased delay to ensure backend has fully processed and indexed
       }
     }
 

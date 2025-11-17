@@ -157,16 +157,25 @@ export const useImageStore = create(
 
 					if (isNewQuery) {
 						// New query - replace images, but preserve recently uploaded images
-						// that might not be in the backend response yet (within last 30 seconds)
+						// that might not be in the backend response yet (within last 5 minutes)
+						// This is especially important after upload when refreshing
 						const now = Date.now();
 						const recentUploads = state.images.filter(img => {
-							// Keep images that were uploaded in the last 30 seconds
-							// These might not be in the backend response yet
+							// Keep images that were uploaded in the last 5 minutes
+							// These might not be in the backend response yet or might be filtered out
 							if (img.createdAt) {
-								const uploadTime = new Date(img.createdAt).getTime();
-								return (now - uploadTime) < 30000; // 30 seconds
+								try {
+									const uploadTime = new Date(img.createdAt).getTime();
+									if (!isNaN(uploadTime)) {
+										return (now - uploadTime) < 300000; // 5 minutes
+									}
+								} catch {
+									// If date parsing fails, keep it as a safety measure
+								}
 							}
-							return false;
+							// If no createdAt or invalid date, keep ALL existing images during refresh
+							// This ensures uploaded images stay visible even if backend hasn't returned them
+							return params?._refresh === true;
 						});
 
 						// Merge: recent uploads first, then fetched images (avoiding duplicates)
