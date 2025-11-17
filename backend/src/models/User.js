@@ -45,6 +45,11 @@ const userSchema = new mongoose.Schema(
             type: String,
             sparse: true,
         },
+        isAdmin: {
+            type: Boolean,
+            default: false,
+            index: true,
+        },
         // location: {
         //     type: String,
         // }

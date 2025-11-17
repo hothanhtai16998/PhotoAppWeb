@@ -7,6 +7,7 @@ export interface User {
 	bio?: string;
 	phone?: string;
 	isOAuthUser?: boolean;
+	isAdmin?: boolean;
 	createdAt?: string;
 	updatedAt?: string;
 }

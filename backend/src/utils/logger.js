@@ -16,10 +16,18 @@ export const logger = {
     error: (message, error, ...args) => {
         const timestamp = new Date().toISOString();
         if (isDevelopment) {
-            console.error(`[ERROR] ${timestamp} - ${message}`, error, ...args);
+            if (error !== undefined) {
+                console.error(`[ERROR] ${timestamp} - ${message}`, error, ...args);
+            } else {
+                console.error(`[ERROR] ${timestamp} - ${message}`, ...args);
+            }
         } else {
             // In production, send to error tracking service (e.g., Sentry)
-            console.error(`[ERROR] ${timestamp} - ${message}`, error?.message || error, ...args);
+            if (error !== undefined) {
+                console.error(`[ERROR] ${timestamp} - ${message}`, error?.message || error, ...args);
+            } else {
+                console.error(`[ERROR] ${timestamp} - ${message}`, ...args);
+            }
         }
     },
 

@@ -2,14 +2,14 @@
 
 import { memo, useState, useEffect, useRef } from "react"
 import { Link, useNavigate, useLocation } from "react-router-dom"
-import { Search, X } from "lucide-react"
+import { Search, X, Shield } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useImageStore } from "@/stores/useImageStore"
 import UploadModal from "./UploadModal"
 import './Header.css'
 
 export const Header = memo(function Header() {
-  const { accessToken, signOut } = useAuthStore()
+  const { accessToken, signOut, user } = useAuthStore()
   const { fetchImages } = useImageStore()
   const navigate = useNavigate()
   const location = useLocation()
@@ -111,6 +111,12 @@ export const Header = memo(function Header() {
             {accessToken ? (
               <>
                 <button onClick={() => setUploadModalOpen(true)} className="header-link">Submit an image</button>
+                {user?.isAdmin && (
+                  <Link to="/admin" className="header-link" title="Admin Panel">
+                    <Shield size={18} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                    Admin
+                  </Link>
+                )}
                 <Link to="/profile" className="header-link">Profile</Link>
                 <button onClick={handleSignOut} className="header-link">Log out</button>
               </>
