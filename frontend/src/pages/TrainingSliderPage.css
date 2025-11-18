@@ -1,5 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@700&family=Proxima+Nova:wght@400;500;600&display=swap');
 
+/* Image Zoom Out Animation - Continuous zoom out from center */
+@keyframes image-zoom-out {
+	0% {
+		background-size: 100%;
+		background-position: center center;
+	}
+	100% {
+		background-size: 130%;
+		background-position: center center;
+	}
+}
+
 .training-slider-page {
 	position: relative;
 	width: 100%;
@@ -25,7 +37,7 @@
 	left: 0;
 	width: 100%;
 	height: 100%;
-	background-size: cover;
+	background-size: 130%;
 	background-position: center;
 	background-repeat: no-repeat;
 	opacity: 0;
@@ -33,7 +45,8 @@
 	transition: opacity 1.2s ease-in-out,
 		transform 1.2s ease-in-out;
 	z-index: 1;
-	will-change: opacity, transform;
+	will-change: opacity, transform,
+		background-size;
 	visibility: hidden;
 	/* Prevent pixelation with high-quality image rendering */
 	image-rendering: -webkit-optimize-contrast;
@@ -54,6 +67,11 @@
 	opacity: 1;
 	transform: scale(1) translateZ(0);
 	z-index: 2;
+	/* Continuous zoom-out animation from center while slide is showing */
+	animation: image-zoom-out 15s ease-out
+		forwards;
+	background-position: center center;
+	transform-origin: center center;
 }
 
 /* Smooth crossfade animation with zoom-out effect */
