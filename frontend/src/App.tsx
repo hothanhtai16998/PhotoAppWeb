@@ -18,7 +18,7 @@ function App() {
       {/**public routes */}
 
       <Route path="/" element={<HomePage />} />
-      <Route path="/training-slider" element={<TrainingSliderPage />} />
+      <Route path="/slider" element={<TrainingSliderPage />} />
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/signin" element={<SignInPage />} />
       <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />

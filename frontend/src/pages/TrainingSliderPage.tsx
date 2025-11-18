@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import './TrainingSliderPage.css';
 import { imageService } from '@/services/imageService';
 import type { Image } from '@/types/image';
