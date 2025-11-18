@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, ArrowRight, Instagram, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import './TrainingSliderPage.css';
 
 interface Slide {
@@ -100,71 +100,33 @@ function TrainingSliderPage() {
 
   return (
     <div className="training-slider-page">
-      {/* Header */}
-      <header className="slider-header">
-        <div className="header-left">
-          <a href="#about" className="header-link">ABOUT</a>
-          <a href="#lessons" className="header-link">LESSONS</a>
-        </div>
-        <div className="header-center">
-          {/* Fullscreen Indicator Box */}
-          <div className="fullscreen-indicator">
-            <p className="fullscreen-text">Để thoát khỏi chế độ toàn màn hình, hãy nhấn và giữ</p>
-            <button className="fullscreen-exit-btn">
-              <X size={14} />
-              <span>Thoát</span>
-            </button>
-          </div>
-          <div className="circular-logo">
-            <svg className="logo-svg" viewBox="0 0 120 120">
-              <defs>
-                <path id="logo-circle" d="M 60,60 m -55,0 a 55,55 0 1,1 110,0 a 55,55 0 1,1 -110,0" />
-              </defs>
-              <text className="logo-text-path" fill="rgba(255, 255, 255, 0.9)" fontSize="8" fontWeight="400" textTransform="uppercase" letterSpacing="2">
-                <textPath href="#logo-circle" startOffset="0%">
-                  HORSES RIDING LESSONS • 
-                </textPath>
-              </text>
-            </svg>
-            <div className="logo-icon">⊂</div>
-          </div>
-        </div>
-        <div className="header-right">
-          <a href="#contact" className="header-link">CONTACT</a>
-          <a href="#" className="header-icon" aria-label="Instagram">
-            <Instagram size={20} />
-          </a>
-        </div>
-      </header>
-
       {/* Slides Container */}
       <div className="slider-container">
         {slides.map((slide, index) => (
           <div
             key={slide.id}
-            className={`slider-slide ${index === currentSlide ? 'active' : ''} ${
-              index < currentSlide ? 'prev' : index > currentSlide ? 'next' : ''
-            }`}
+            className={`slider-slide ${index === currentSlide ? 'active' : ''} ${index < currentSlide ? 'prev' : index > currentSlide ? 'next' : ''
+              }`}
             style={{
               backgroundImage: `url(${slide.backgroundImage})`,
             }}
           >
             <div className="slide-overlay"></div>
-            
+
             {/* Title and Navigation in Bottom Left */}
             <div className="slide-content-left">
               <h1 className="slide-title">{slide.title}</h1>
               <div className="slide-nav-buttons">
-                <button 
-                  className="slide-nav-btn prev-btn" 
+                <button
+                  className="slide-nav-btn prev-btn"
                   onClick={goToPrev}
                   aria-label="Previous slide"
                 >
                   PREV
                 </button>
                 <span className="nav-separator">/</span>
-                <button 
-                  className="slide-nav-btn next-btn" 
+                <button
+                  className="slide-nav-btn next-btn"
                   onClick={goToNext}
                   aria-label="Next slide"
                 >
@@ -196,24 +158,6 @@ function TrainingSliderPage() {
         <div className="nav-icon-s">S</div>
       </div>
 
-      {/* Slide Indicators */}
-      <div className="slider-indicators">
-        {slides.map((_, index) => (
-          <button
-            key={index}
-            className={`slider-indicator ${index === currentSlide ? 'active' : ''}`}
-            onClick={() => goToSlide(index)}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
-      </div>
-
-      {/* Bottom Navigation Links */}
-      <nav className="slider-bottom-nav">
-        <a href="#about" className="nav-link">about</a>
-        <a href="#lessons" className="nav-link">lessons</a>
-        <a href="#contact" className="nav-link">contact</a>
-      </nav>
 
       {/* Right Scrollbar */}
       <div className="custom-scrollbar"></div>
