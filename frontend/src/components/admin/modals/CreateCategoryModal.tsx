@@ -15,7 +15,7 @@ export function CreateCategoryModal({ onClose, onSave }: CreateCategoryModalProp
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name.trim()) {
-            toast.error('Category name is required');
+            toast.error('Không thể thiếu tên danh mục');
             return;
         }
         await onSave({ name: name.trim(), description: description.trim() || undefined });
@@ -44,7 +44,7 @@ export function CreateCategoryModal({ onClose, onSave }: CreateCategoryModalProp
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             rows={3}
-                            placeholder="Thêm mô tả cho danh mục hoặc bỏ trống"
+                            placeholder="Thêm mô tả cho danh mục (có thể bỏ trống)"
                         />
                     </div>
                     <div className="admin-modal-actions">

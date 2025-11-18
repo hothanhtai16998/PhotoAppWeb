@@ -53,11 +53,17 @@ export function EditRoleModal({ role, onClose, onSave }: EditRoleModalProps) {
                         <label>Vai trò</label>
                         <select
                             value={selectedRole}
-                            onChange={(e) => setSelectedRole(e.target.value)}
+                            onChange={(e) => {
+                                const value = e.target.value as 'super_admin' | 'admin' | 'moderator';
+                                if (value === 'super_admin' || value === 'admin' || value === 'moderator') {
+                                    setSelectedRole(value);
+                                }
+                            }}
                             className="admin-select"
                         >
                             <option value="admin">Admin</option>
-                            <option value="moderator">Mod</option>
+                            <option value="moderator">Moderator</option>
+                            <option value="super_admin">Super Admin</option>
                         </select>
                     </div>
 

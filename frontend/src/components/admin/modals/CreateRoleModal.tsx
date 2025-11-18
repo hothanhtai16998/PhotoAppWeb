@@ -60,11 +60,17 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
                         <label>Vai trò</label>
                         <select
                             value={role}
-                            onChange={(e) => setRole(e.target.value)}
+                            onChange={(e) => {
+                                const value = e.target.value as 'super_admin' | 'admin' | 'moderator';
+                                if (value === 'super_admin' || value === 'admin' || value === 'moderator') {
+                                    setRole(value);
+                                }
+                            }}
                             className="admin-select"
                         >
                             <option value="admin">Admin</option>
                             <option value="moderator">Mod</option>
+                            <option value="super_admin">Super Admin</option>
                         </select>
                     </div>
 
