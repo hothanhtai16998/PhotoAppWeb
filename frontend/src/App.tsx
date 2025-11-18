@@ -1,6 +1,6 @@
 import { Route, Routes } from "react-router";
 import HomePage from './pages/HomePage'
-import TrainingSliderPage from './pages/TrainingSliderPage'
+
 import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
 import GoogleCallbackPage from "./pages/GoogleCallbackPage";
@@ -18,7 +18,7 @@ function App() {
       {/**public routes */}
 
       <Route path="/" element={<HomePage />} />
-      <Route path="/slider" element={<TrainingSliderPage />} />
+
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/signin" element={<SignInPage />} />
       <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />

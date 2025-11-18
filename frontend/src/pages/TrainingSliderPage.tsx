@@ -20,7 +20,6 @@ function TrainingSliderPage() {
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [direction, setDirection] = useState<'next' | 'prev'>('next');
   const [animatingSlide, setAnimatingSlide] = useState<number | null>(null);
   const [progress, setProgress] = useState(0);
   const [showProgress, setShowProgress] = useState(false);
@@ -105,7 +104,6 @@ function TrainingSliderPage() {
   const goToNext = useCallback(() => {
     if (isTransitioning || slides.length === 0) return;
     setProgress(0);
-    setDirection('next');
     setIsTransitioning(true);
     setCurrentSlide((prev) => (prev + 1) % slides.length);
     setTimeout(() => setIsTransitioning(false), 1200);
@@ -114,7 +112,6 @@ function TrainingSliderPage() {
   const goToPrev = useCallback(() => {
     if (isTransitioning || slides.length === 0) return;
     setProgress(0);
-    setDirection('prev');
     setIsTransitioning(true);
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
     setTimeout(() => setIsTransitioning(false), 1200);
@@ -123,7 +120,6 @@ function TrainingSliderPage() {
   const goToSlide = useCallback((index: number) => {
     if (isTransitioning || index === currentSlide || slides.length === 0) return;
     setProgress(0);
-    setDirection(index > currentSlide ? 'next' : 'prev');
     setIsTransitioning(true);
     setCurrentSlide(index);
     setTimeout(() => setIsTransitioning(false), 1200);
@@ -157,8 +153,8 @@ function TrainingSliderPage() {
     setProgress(0);
     setShowProgress(true); // Show immediately when transition completes
 
-    let progressInterval: NodeJS.Timeout | null = null;
-    let slideInterval: NodeJS.Timeout | null = null;
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
+    let slideInterval: ReturnType<typeof setTimeout> | null = null;
 
     const startTime = Date.now();
 
@@ -317,41 +313,39 @@ function TrainingSliderPage() {
             </div>
           );
         })}
+
+        {/* Circular Progress Indicator - Bottom Right */}
+        <div className={`progress-indicator ${showProgress ? 'visible' : ''}`}>
+          <svg className="progress-ring" width="60" height="60" viewBox="0 0 60 60">
+            <circle
+              className="progress-ring-circle-bg"
+              stroke="rgba(236, 222, 195, 0.2)"
+              strokeWidth="5"
+              fill="transparent"
+              r="20"
+              cx="30"
+              cy="30"
+            />
+            <circle
+              className="progress-ring-circle"
+              stroke="rgb(236, 222, 195)"
+              strokeWidth="5"
+              fill="transparent"
+              r="20"
+              cx="30"
+              cy="30"
+              strokeDasharray={`${2 * Math.PI * 20}`}
+              strokeDashoffset={`${2 * Math.PI * 20 * (1 - progress / 100)}`}
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
       </div>
 
       {/* Brown Block in Bottom Left */}
       <div className="block-top-right"></div>
       <div className="block-bottom"></div>
       <div className="block-bottom-2"></div>
-
-
-
-      {/* Circular Progress Indicator - Bottom Right */}
-      <div className={`progress-indicator ${showProgress ? 'visible' : ''}`}>
-        <svg className="progress-ring" width="60" height="60" viewBox="0 0 60 60">
-          <circle
-            className="progress-ring-circle-bg"
-            stroke="rgba(236, 222, 195, 0.2)"
-            strokeWidth="5"
-            fill="transparent"
-            r="20"
-            cx="30"
-            cy="30"
-          />
-          <circle
-            className="progress-ring-circle"
-            stroke="rgb(236, 222, 195)"
-            strokeWidth="5"
-            fill="transparent"
-            r="20"
-            cx="30"
-            cy="30"
-            strokeDasharray={`${2 * Math.PI * 20}`}
-            strokeDashoffset={`${2 * Math.PI * 20 * (1 - progress / 100)}`}
-            strokeLinecap="round"
-          />
-        </svg>
-      </div>
     </div>
   );
 }
