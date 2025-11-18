@@ -2,18 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import './Slider.css';
 import { imageService } from '@/services/imageService';
 import type { Image } from '@/types/image';
-
-interface Slide {
-    id: string;
-    title: string;
-    backgroundImage: string;
-    location?: string;
-    cameraModel?: string;
-    category?: string | { name: string };
-    createdAt?: string;
-    isPortrait?: boolean;
-}
-
+import type { Slide } from '@/types/slide';
 const AUTO_PLAY_INTERVAL = 5000; // 5 seconds
 const SWIPE_THRESHOLD = 50; // Minimum distance for swipe
 
@@ -25,7 +14,7 @@ function Slider() {
     const [animatingSlide, setAnimatingSlide] = useState<number | null>(null);
     const [progress, setProgress] = useState(0);
     const [showProgress, setShowProgress] = useState(false);
-    
+
     // Touch/swipe handlers
     const touchStartX = useRef<number>(0);
     const touchEndX = useRef<number>(0);
@@ -66,7 +55,7 @@ function Slider() {
                                     // w_1920: 1920px width, q_auto: auto quality, f_auto: auto format
                                     imageUrl = `${baseUrl}w_1920,q_auto,f_auto/${restOfUrl}`;
                                 }
-                            } catch (e) {
+                            } catch {
                                 // If transformation fails, use original URL
                                 console.warn('Failed to apply Cloudinary transformation, using original URL');
                             }
@@ -94,7 +83,7 @@ function Slider() {
                                     setTimeout(() => resolve(), 2000);
                                 })
                             ]);
-                        } catch (e) {
+                        } catch {
                             // If anything fails, default to landscape
                             console.warn('Failed to detect image orientation, defaulting to landscape');
                         }
@@ -102,6 +91,7 @@ function Slider() {
                         const slideData: Slide = {
                             id: img._id,
                             title: img.imageTitle,
+                            uploadedBy: img.uploadedBy,
                             backgroundImage: imageUrl,
                             location: img.location,
                             cameraModel: img.cameraModel,
@@ -227,7 +217,7 @@ function Slider() {
 
     const handleTouchEnd = () => {
         if (!touchStartX.current) return;
-        
+
         const endX = touchEndX.current || touchStartX.current;
         const distance = touchStartX.current - endX;
         const isLeftSwipe = distance > SWIPE_THRESHOLD;
@@ -267,7 +257,7 @@ function Slider() {
                     color: 'rgb(236, 222, 195)',
                     fontSize: '18px'
                 }}>
-                    Loading images...
+                    Đang tải ảnh...
                 </div>
             </div>
         );
@@ -285,14 +275,14 @@ function Slider() {
                     color: 'rgb(236, 222, 195)',
                     fontSize: '18px'
                 }}>
-                    No images available
+                    Chưa có ảnh
                 </div>
             </div>
         );
     }
 
     return (
-        <div 
+        <div
             className="slider-page"
             ref={sliderRef}
             onTouchStart={handleTouchStart}

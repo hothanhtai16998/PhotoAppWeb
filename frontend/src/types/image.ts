@@ -1,10 +1,6 @@
 import type { User } from './user';
 
-export interface Category {
-	_id: string;
-	name: string;
-	description?: string;
-}
+import type { Category } from './category';
 
 export interface Image {
 	_id: string;
