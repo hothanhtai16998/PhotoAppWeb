@@ -48,39 +48,91 @@ const slides: Slide[] = [
   },
 ];
 
+const AUTO_PLAY_INTERVAL = 5000; // 5 seconds
+
 function TrainingSliderPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [direction, setDirection] = useState<'next' | 'prev'>('next');
+  const [animatingSlide, setAnimatingSlide] = useState<number | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [showProgress, setShowProgress] = useState(false);
 
   const goToNext = useCallback(() => {
     if (isTransitioning) return;
+    setProgress(0);
+    setDirection('next');
     setIsTransitioning(true);
     setCurrentSlide((prev) => (prev + 1) % slides.length);
-    setTimeout(() => setIsTransitioning(false), 600);
+    setTimeout(() => setIsTransitioning(false), 1200);
   }, [isTransitioning]);
 
   const goToPrev = useCallback(() => {
     if (isTransitioning) return;
+    setProgress(0);
+    setDirection('prev');
     setIsTransitioning(true);
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
-    setTimeout(() => setIsTransitioning(false), 600);
+    setTimeout(() => setIsTransitioning(false), 1200);
   }, [isTransitioning]);
 
   const goToSlide = useCallback((index: number) => {
     if (isTransitioning || index === currentSlide) return;
+    setProgress(0);
+    setDirection(index > currentSlide ? 'next' : 'prev');
     setIsTransitioning(true);
     setCurrentSlide(index);
-    setTimeout(() => setIsTransitioning(false), 600);
+    setTimeout(() => setIsTransitioning(false), 1200);
   }, [currentSlide, isTransitioning]);
 
-  // Auto-play functionality (optional - can be disabled)
+  // Trigger text animation when slide becomes active
+  // Text appears at the same time as image change
   useEffect(() => {
-    const interval = setInterval(() => {
-      goToNext();
-    }, 5000); // Change slide every 5 seconds
+    // Reset animation state when transition starts
+    if (isTransitioning) {
+      setAnimatingSlide(null);
+      return;
+    }
+    
+    // Trigger animation when transition completes (image is visible)
+    const timer = setTimeout(() => {
+      setAnimatingSlide(currentSlide);
+    }, 50); // Small delay to ensure DOM is ready
+    return () => clearTimeout(timer);
+  }, [currentSlide, isTransitioning]);
 
-    return () => clearInterval(interval);
-  }, [goToNext]);
+  // Auto-play functionality with progress indicator
+  // Progress circle appears at the same time as image change
+  useEffect(() => {
+    if (isTransitioning) {
+      setProgress(0);
+      setShowProgress(false);
+      return;
+    }
+
+    setProgress(0);
+    setShowProgress(true); // Show immediately when transition completes
+    
+    let progressInterval: NodeJS.Timeout | null = null;
+    let slideInterval: NodeJS.Timeout | null = null;
+    
+    const startTime = Date.now();
+    
+    progressInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const newProgress = Math.min((elapsed / AUTO_PLAY_INTERVAL) * 100, 100);
+      setProgress(newProgress);
+    }, 16); // ~60fps
+
+    slideInterval = setInterval(() => {
+      goToNext();
+    }, AUTO_PLAY_INTERVAL);
+
+    return () => {
+      if (progressInterval) clearInterval(progressInterval);
+      if (slideInterval) clearInterval(slideInterval);
+    };
+  }, [currentSlide, isTransitioning, goToNext]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -96,17 +148,29 @@ function TrainingSliderPage() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [goToNext, goToPrev]);
 
-  const currentSlideData = slides[currentSlide];
+  // Initialize first slide on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAnimatingSlide(0);
+      setShowProgress(true);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="training-slider-page">
       {/* Slides Container */}
       <div className="slider-container">
-        {slides.map((slide, index) => (
+        {slides.map((slide, index) => {
+          const isActive = index === currentSlide;
+          const isPrev = index === (currentSlide - 1 + slides.length) % slides.length;
+          const isNext = index === (currentSlide + 1) % slides.length;
+          const shouldShow = isActive || (isTransitioning && (isPrev || isNext));
+          
+          return (
           <div
             key={slide.id}
-            className={`slider-slide ${index === currentSlide ? 'active' : ''} ${index < currentSlide ? 'prev' : index > currentSlide ? 'next' : ''
-              }`}
+            className={`slider-slide ${isActive ? 'active' : ''} ${shouldShow ? 'visible' : ''}`}
             style={{
               backgroundImage: `url(${slide.backgroundImage})`,
             }}
@@ -114,8 +178,8 @@ function TrainingSliderPage() {
             <div className="slide-overlay"></div>
 
             {/* Title and Navigation in Bottom Left */}
-            <div className="slide-content-left">
-              <h1 className="slide-title">{slide.title}</h1>
+            <div className={`slide-content-left ${isActive && !isTransitioning && animatingSlide === index ? 'active' : ''}`}>
+              <h1 className={`slide-title ${isActive && !isTransitioning && animatingSlide === index ? 'active' : ''}`}>{slide.title}</h1>
               <div className="slide-nav-buttons">
                 <button
                   className="slide-nav-btn prev-btn"
@@ -136,7 +200,7 @@ function TrainingSliderPage() {
             </div>
 
             {/* Description Box in Bottom Right */}
-            <div className="slide-content-right">
+            {/* <div className="slide-content-right">
               <div className="description-box">
                 <p className="slide-description">{slide.description}</p>
                 <button className="slide-button">
@@ -144,9 +208,10 @@ function TrainingSliderPage() {
                   <ArrowRight size={18} />
                 </button>
               </div>
-            </div>
+            </div> */}
           </div>
-        ))}
+        );
+        })}
       </div>
 
       {/* Brown Block in Bottom Left */}
@@ -161,6 +226,33 @@ function TrainingSliderPage() {
 
       {/* Right Scrollbar */}
       <div className="custom-scrollbar"></div>
+
+      {/* Circular Progress Indicator - Bottom Right */}
+      <div className={`progress-indicator ${showProgress ? 'visible' : ''}`}>
+        <svg className="progress-ring" width="60" height="60" viewBox="0 0 60 60">
+          <circle
+            className="progress-ring-circle-bg"
+            stroke="rgba(236, 222, 195, 0.2)"
+            strokeWidth="2"
+            fill="transparent"
+            r="26"
+            cx="30"
+            cy="30"
+          />
+          <circle
+            className="progress-ring-circle"
+            stroke="rgb(236, 222, 195)"
+            strokeWidth="2"
+            fill="transparent"
+            r="26"
+            cx="30"
+            cy="30"
+            strokeDasharray={`${2 * Math.PI * 26}`}
+            strokeDashoffset={`${2 * Math.PI * 26 * (1 - progress / 100)}`}
+            strokeLinecap="round"
+          />
+        </svg>
+      </div>
     </div>
   );
 }
