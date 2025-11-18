@@ -32,21 +32,20 @@ export function CategoryNavigation() {
 
     // Update on window resize
     window.addEventListener('resize', updateHeaderHeight)
-    
+
     // Use ResizeObserver to watch for header size changes
     const header = document.querySelector('.unsplash-header')
+    let resizeObserver: ResizeObserver | null = null
     if (header) {
-      const resizeObserver = new ResizeObserver(updateHeaderHeight)
+      resizeObserver = new ResizeObserver(updateHeaderHeight)
       resizeObserver.observe(header)
-      
-      return () => {
-        window.removeEventListener('resize', updateHeaderHeight)
-        resizeObserver.disconnect()
-      }
     }
 
     return () => {
       window.removeEventListener('resize', updateHeaderHeight)
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+      }
     }
   }, [])
 
@@ -61,7 +60,7 @@ export function CategoryNavigation() {
       } catch (error) {
         console.error('Failed to load categories:', error)
         // Fallback to default categories if API fails
-        setCategories(['Tất cả', 'Nature', 'Portrait', 'Architecture', 'Travel', 'Street', 'Abstract'])
+        setCategories(['Tất cả'])
       }
     }
     loadCategories()
@@ -82,7 +81,7 @@ export function CategoryNavigation() {
   }
 
   return (
-    <div 
+    <div
       className="category-navigation-container"
       ref={categoryNavRef}
       style={{

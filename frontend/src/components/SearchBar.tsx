@@ -26,7 +26,8 @@ const SearchBar = () => {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [searchQuery, category, fetchImages]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, category]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

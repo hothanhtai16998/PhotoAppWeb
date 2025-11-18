@@ -253,7 +253,23 @@ const ImageGrid = () => {
                 key={image._id}
                 className={`masonry-item ${imageType}`}
               >
-                <a href={image.imageUrl} target="_blank" rel="noopener noreferrer" className="masonry-link">
+                <div 
+                  className="masonry-link"
+                  onClick={() => {
+                    // Open image in new tab as fallback
+                    window.open(image.imageUrl, '_blank', 'noopener,noreferrer')
+                  }}
+                  style={{ cursor: 'pointer' }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      window.open(image.imageUrl, '_blank', 'noopener,noreferrer')
+                    }
+                  }}
+                  aria-label={`View ${image.imageTitle || 'image'}`}
+                >
                   <ProgressiveImage
                     src={image.imageUrl}
                     thumbnailUrl={image.thumbnailUrl}
@@ -337,7 +353,7 @@ const ImageGrid = () => {
                       </div>
                     )}
                   </div>
-                </a>
+                </div>
               </div>
             );
           })}

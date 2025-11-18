@@ -10,7 +10,7 @@ import './Header.css'
 
 export const Header = memo(function Header() {
   const { accessToken, signOut, user } = useAuthStore()
-  const { fetchImages } = useImageStore()
+  const { fetchImages, currentCategory } = useImageStore()
   const navigate = useNavigate()
   const location = useLocation()
   const [searchQuery, setSearchQuery] = useState('')
@@ -41,17 +41,20 @@ export const Header = memo(function Header() {
 
   // Listen for refresh event after image upload and re-fetch with current category
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    
     const handleRefresh = () => {
       if (location.pathname === '/') {
         // After upload, the image is already in the store (added by uploadImage)
         // We just need to ensure it's visible by refreshing with the correct filter
         // If user has "Tất cả" selected, refresh with no filter
         // If user has a specific category, refresh with that category (the uploaded image should match)
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           fetchImages({
             page: 1,
             _refresh: true,
             search: searchQuery || undefined,
+            category: currentCategory, // Preserve current category filter
           }).catch((error) => {
             console.error('Error refreshing images after upload:', error);
             // Silently fail - don't show error toast as this is just a refresh
@@ -64,9 +67,12 @@ export const Header = memo(function Header() {
     window.addEventListener('refreshImages', handleRefresh)
     return () => {
       window.removeEventListener('refreshImages', handleRefresh)
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, location.pathname])
+  }, [searchQuery, location.pathname, currentCategory])
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
