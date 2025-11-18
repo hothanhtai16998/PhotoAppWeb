@@ -1,16 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Edit2, Trash2 } from 'lucide-react';
 import { CreateRoleModal, EditRoleModal } from '../modals';
-import type { User } from '@/services/adminService';
+import type { User, AdminRole, AdminRolePermissions } from '@/services/adminService';
 import type { User as AuthUser } from '@/types/user';
-
-interface AdminRole {
-    _id: string;
-    userId: User | string;
-    role: string;
-    permissions: any;
-    grantedBy?: User;
-}
 
 interface AdminRolesProps {
     roles: AdminRole[];
@@ -23,8 +15,8 @@ interface AdminRolesProps {
     onDelete: (userId: string, username: string) => void;
     onCloseCreate: () => void;
     onCloseEdit: () => void;
-    onSaveCreate: (data: { userId: string; role: string; permissions: any }) => Promise<void>;
-    onSaveEdit: (userId: string, updates: { role?: string; permissions?: any }) => Promise<void>;
+    onSaveCreate: (data: { userId: string; role: 'super_admin' | 'admin' | 'moderator'; permissions: AdminRolePermissions }) => Promise<void>;
+    onSaveEdit: (userId: string, updates: { role?: 'super_admin' | 'admin' | 'moderator'; permissions?: AdminRolePermissions }) => Promise<void>;
 }
 
 export function AdminRoles({

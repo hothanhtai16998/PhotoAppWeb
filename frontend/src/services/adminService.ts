@@ -36,6 +36,26 @@ export interface AdminImage {
     createdAt: string;
 }
 
+export interface AdminRolePermissions {
+    manageUsers?: boolean;
+    deleteUsers?: boolean;
+    manageImages?: boolean;
+    deleteImages?: boolean;
+    manageCategories?: boolean;
+    manageAdmins?: boolean;
+    viewDashboard?: boolean;
+}
+
+export interface AdminRole {
+    _id: string;
+    userId: User | string;
+    role: 'super_admin' | 'admin' | 'moderator';
+    permissions: AdminRolePermissions;
+    grantedBy?: User;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
 export const adminService = {
     getDashboardStats: async (): Promise<DashboardStats> => {
         const res = await api.get('/admin/dashboard/stats', {
@@ -120,14 +140,14 @@ export const adminService = {
     },
 
     // Admin Role Management
-    getAllAdminRoles: async (): Promise<{ adminRoles: any[] }> => {
+    getAllAdminRoles: async (): Promise<{ adminRoles: AdminRole[] }> => {
         const res = await api.get('/admin/roles', {
             withCredentials: true,
         });
         return res.data;
     },
 
-    getAdminRole: async (userId: string): Promise<{ adminRole: any }> => {
+    getAdminRole: async (userId: string): Promise<{ adminRole: AdminRole }> => {
         const res = await api.get(`/admin/roles/${userId}`, {
             withCredentials: true,
         });
@@ -136,9 +156,9 @@ export const adminService = {
 
     createAdminRole: async (data: {
         userId: string;
-        role?: string;
-        permissions?: any;
-    }): Promise<{ adminRole: any }> => {
+        role?: 'super_admin' | 'admin' | 'moderator';
+        permissions?: AdminRolePermissions;
+    }): Promise<{ adminRole: AdminRole }> => {
         const res = await api.post('/admin/roles', data, {
             withCredentials: true,
         });
@@ -148,10 +168,10 @@ export const adminService = {
     updateAdminRole: async (
         userId: string,
         data: {
-            role?: string;
-            permissions?: any;
+            role?: 'super_admin' | 'admin' | 'moderator';
+            permissions?: AdminRolePermissions;
         }
-    ): Promise<{ adminRole: any }> => {
+    ): Promise<{ adminRole: AdminRole }> => {
         const res = await api.put(`/admin/roles/${userId}`, data, {
             withCredentials: true,
         });

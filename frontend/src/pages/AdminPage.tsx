@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { adminService, type DashboardStats, type User, type AdminImage } from '@/services/adminService';
+import { adminService, type DashboardStats, type User, type AdminImage, type AdminRole, type AdminRolePermissions } from '@/services/adminService';
 import { categoryService, type Category } from '@/services/categoryService';
 import type { User as AuthUser } from '@/types/user';
 import Header from '@/components/Header';
@@ -49,8 +49,8 @@ function AdminPage() {
     const [creatingCategory, setCreatingCategory] = useState(false);
 
     // Roles state
-    const [adminRoles, setAdminRoles] = useState<any[]>([]);
-    const [editingRole, setEditingRole] = useState<any | null>(null);
+    const [adminRoles, setAdminRoles] = useState<AdminRole[]>([]);
+    const [editingRole, setEditingRole] = useState<AdminRole | null>(null);
     const [creatingRole, setCreatingRole] = useState(false);
 
     useEffect(() => {
@@ -64,7 +64,7 @@ function AdminPage() {
                     return;
                 }
                 loadDashboardStats();
-            } catch (error) {
+            } catch {
                 navigate('/signin');
             }
         };
@@ -90,8 +90,9 @@ function AdminPage() {
             setLoading(true);
             const data = await adminService.getDashboardStats();
             setStats(data);
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to load dashboard stats');
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Failed to load dashboard stats');
         } finally {
             setLoading(false);
         }
@@ -107,8 +108,9 @@ function AdminPage() {
             });
             setUsers(data.users);
             setUsersPagination(data.pagination);
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to load users');
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Failed to load users');
         } finally {
             setLoading(false);
         }
@@ -124,8 +126,9 @@ function AdminPage() {
             });
             setImages(data.images);
             setImagesPagination(data.pagination);
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi lấy ảnh');
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Lỗi khi lấy ảnh');
         } finally {
             setLoading(false);
         }
@@ -141,8 +144,9 @@ function AdminPage() {
             toast.success('Xoá người dùng thành công');
             loadUsers(usersPagination.page);
             if (activeTab === 'dashboard') loadDashboardStats();
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi xoá người dùng');
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Lỗi khi xoá người dùng');
         }
     };
 
@@ -156,8 +160,9 @@ function AdminPage() {
             toast.success('Xoá ảnh thành công');
             loadImages(imagesPagination.page);
             if (activeTab === 'dashboard') loadDashboardStats();
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi xoá ảnh');
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Lỗi khi xoá ảnh');
         }
     };
 
@@ -168,8 +173,9 @@ function AdminPage() {
             setEditingUser(null);
             loadUsers(usersPagination.page);
             if (activeTab === 'dashboard') loadDashboardStats();
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to update user');
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Failed to update user');
         }
     };
 
@@ -178,8 +184,9 @@ function AdminPage() {
             setLoading(true);
             const data = await categoryService.getAllCategoriesAdmin();
             setCategories(data);
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi lấy danh mục');
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Lỗi khi lấy danh mục');
         } finally {
             setLoading(false);
         }
@@ -191,8 +198,9 @@ function AdminPage() {
             toast.success('Tạo danh mục thành công');
             setCreatingCategory(false);
             loadCategories();
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi tạo danh mục');
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Lỗi khi tạo danh mục');
         }
     };
 
@@ -202,8 +210,9 @@ function AdminPage() {
             toast.success('Danh mục đã được cập nhật thành công');
             setEditingCategory(null);
             loadCategories();
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi cập nhật danh mục');
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Lỗi khi cập nhật danh mục');
         }
     };
 
@@ -216,8 +225,9 @@ function AdminPage() {
             await categoryService.deleteCategory(categoryId);
             toast.success('Xoá danh mục thành công');
             loadCategories();
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi xoá danh mục');
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Lỗi khi xoá danh mục');
         }
     };
 
@@ -231,33 +241,36 @@ function AdminPage() {
             if (users.length === 0) {
                 await loadUsers(1);
             }
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi lấy danh sách quyền admin');
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Lỗi khi lấy danh sách quyền admin');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleCreateRole = async (data: { userId: string; role: string; permissions: any }) => {
+    const handleCreateRole = async (data: { userId: string; role: 'super_admin' | 'admin' | 'moderator'; permissions: AdminRolePermissions }) => {
         try {
             await adminService.createAdminRole(data);
             toast.success('Quyền admin đã được tạo thành công');
             setCreatingRole(false);
             loadAdminRoles();
             loadUsers(usersPagination.page);
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi tạo quyền admin');
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Lỗi khi tạo quyền admin');
         }
     };
 
-    const handleUpdateRole = async (userId: string, updates: { role?: string; permissions?: any }) => {
+    const handleUpdateRole = async (userId: string, updates: { role?: 'super_admin' | 'admin' | 'moderator'; permissions?: AdminRolePermissions }) => {
         try {
             await adminService.updateAdminRole(userId, updates);
             toast.success('Quyền admin đã được cập nhật thành công');
             setEditingRole(null);
             loadAdminRoles();
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi cập nhật quyền admin');
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Lỗi khi cập nhật quyền admin');
         }
     };
 
@@ -271,8 +284,9 @@ function AdminPage() {
             toast.success('Quyền admin đã được xoá thành công');
             loadAdminRoles();
             loadUsers(usersPagination.page);
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi xoá quyền admin');
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Lỗi khi xoá quyền admin');
         }
     };
 
@@ -386,7 +400,7 @@ function AdminPage() {
                                 creatingRole={creatingRole}
                                 editingRole={editingRole}
                                 onCreateClick={() => setCreatingRole(true)}
-                                onEdit={setEditingRole}
+                                onEdit={(role) => setEditingRole(role)}
                                 onDelete={handleDeleteRole}
                                 onCloseCreate={() => setCreatingRole(false)}
                                 onCloseEdit={() => setEditingRole(null)}

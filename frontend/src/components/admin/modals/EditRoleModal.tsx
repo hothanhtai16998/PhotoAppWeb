@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import type { AdminRole, AdminRolePermissions } from '@/services/adminService';
 
 interface EditRoleModalProps {
-    role: any;
+    role: AdminRole;
     onClose: () => void;
-    onSave: (userId: string, updates: { role?: string; permissions?: any }) => Promise<void>;
+    onSave: (userId: string, updates: { role?: 'super_admin' | 'admin' | 'moderator'; permissions?: AdminRolePermissions }) => Promise<void>;
 }
 
 export function EditRoleModal({ role, onClose, onSave }: EditRoleModalProps) {
@@ -20,7 +21,7 @@ export function EditRoleModal({ role, onClose, onSave }: EditRoleModalProps) {
         viewDashboard: true,
     };
 
-    const [selectedRole, setSelectedRole] = useState(role.role);
+    const [selectedRole, setSelectedRole] = useState<'super_admin' | 'admin' | 'moderator'>(role.role);
     // Merge existing permissions with all available permissions to show all checkboxes
     const [permissions, setPermissions] = useState({
         ...allPermissions,

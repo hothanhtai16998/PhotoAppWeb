@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import type { User } from '@/services/adminService';
+import type { User, AdminRolePermissions } from '@/services/adminService';
 
 interface CreateRoleModalProps {
     users: User[];
     onClose: () => void;
-    onSave: (data: { userId: string; role: string; permissions: any }) => Promise<void>;
+    onSave: (data: { userId: string; role: 'super_admin' | 'admin' | 'moderator'; permissions: AdminRolePermissions }) => Promise<void>;
 }
 
 export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps) {
     const [selectedUserId, setSelectedUserId] = useState('');
-    const [role, setRole] = useState('admin');
+    const [role, setRole] = useState<'super_admin' | 'admin' | 'moderator'>('admin');
     const [permissions, setPermissions] = useState({
         manageUsers: false,
         deleteUsers: false,
