@@ -11,6 +11,7 @@ interface Slide {
     cameraModel?: string;
     category?: string | { name: string };
     createdAt?: string;
+    isPortrait?: boolean;
 }
 
 const AUTO_PLAY_INTERVAL = 5000; // 5 seconds
@@ -43,7 +44,7 @@ function Slider() {
 
                 if (response.images && response.images.length > 0) {
                     // Convert images to slides format
-                    const slidesData: Slide[] = response.images.map((img: Image, index: number) => {
+                    const slidesDataPromises = response.images.map(async (img: Image, index: number) => {
                         // Use full-size imageUrl for best quality to prevent pixelation
                         // imageUrl is the original full-size image, which provides the best quality
                         // For Cloudinary images, if we need specific transformations, we can add them
@@ -72,7 +73,34 @@ function Slider() {
                             }
                         }
 
-                        const slideData = {
+                        // Detect image orientation by loading the image with timeout
+                        let isPortrait = false;
+                        try {
+                            await Promise.race([
+                                new Promise<void>((resolve, reject) => {
+                                    const testImg = new Image();
+                                    testImg.crossOrigin = 'anonymous';
+                                    testImg.onload = () => {
+                                        isPortrait = testImg.naturalHeight > testImg.naturalWidth;
+                                        resolve();
+                                    };
+                                    testImg.onerror = () => {
+                                        // Default to landscape if image fails to load
+                                        resolve();
+                                    };
+                                    testImg.src = imageUrl;
+                                }),
+                                new Promise<void>((resolve) => {
+                                    // Timeout after 2 seconds - default to landscape
+                                    setTimeout(() => resolve(), 2000);
+                                })
+                            ]);
+                        } catch (e) {
+                            // If anything fails, default to landscape
+                            console.warn('Failed to detect image orientation, defaulting to landscape');
+                        }
+
+                        const slideData: Slide = {
                             id: img._id,
                             title: img.imageTitle,
                             uploadBy: img.uploadedBy,
@@ -81,6 +109,7 @@ function Slider() {
                             cameraModel: img.cameraModel,
                             category: img.imageCategory,
                             createdAt: img.createdAt,
+                            isPortrait,
                         };
 
                         // Debug: Log slide data to verify info is available
@@ -91,6 +120,7 @@ function Slider() {
                         return slideData;
                     });
 
+                    const slidesData = await Promise.all(slidesDataPromises);
                     setSlides(slidesData);
                     // Reset to first slide when new images are loaded
                     setCurrentSlide(0);
@@ -284,11 +314,32 @@ function Slider() {
                     return (
                         <div
                             key={slide.id}
-                            className={`slider-slide ${isActive ? 'active' : ''} ${shouldShow ? 'visible' : ''}`}
+                            className={`slider-slide ${isActive ? 'active' : ''} ${shouldShow ? 'visible' : ''} ${slide.isPortrait ? 'portrait' : 'landscape'}`}
                             style={{
                                 backgroundImage: `url(${slide.backgroundImage})`,
                             }}
                         >
+                            {/* Hidden image to detect orientation on load */}
+                            <img
+                                src={slide.backgroundImage}
+                                alt=""
+                                style={{ display: 'none' }}
+                                onLoad={(e) => {
+                                    const img = e.currentTarget;
+                                    const isPortraitImg = img.naturalHeight > img.naturalWidth;
+                                    const slideElement = img.parentElement;
+                                    if (slideElement && isPortraitImg !== slide.isPortrait) {
+                                        // Update class if orientation was misdetected
+                                        if (isPortraitImg) {
+                                            slideElement.classList.add('portrait');
+                                            slideElement.classList.remove('landscape');
+                                        } else {
+                                            slideElement.classList.add('landscape');
+                                            slideElement.classList.remove('portrait');
+                                        }
+                                    }
+                                }}
+                            />
                             <div className="slide-overlay"></div>
 
                             {/* Title and Navigation in Bottom Left */}

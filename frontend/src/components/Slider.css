@@ -39,7 +39,6 @@
 	left: 0;
 	width: 100%;
 	height: 100%;
-	background-size: 130%;
 	background-position: center;
 	background-repeat: no-repeat;
 	opacity: 0;
@@ -61,6 +60,17 @@
 	transform-origin: center center;
 }
 
+/* Landscape images - use 130% zoom for cinematic effect */
+.slider-slide.landscape {
+	background-size: 130%;
+}
+
+/* Portrait images - use contain to show full image without cropping */
+.slider-slide.portrait {
+	background-size: contain;
+	background-color: #000;
+}
+
 .slider-slide.visible {
 	visibility: visible;
 }
@@ -69,11 +79,19 @@
 	opacity: 1;
 	transform: scale(1) translateZ(0);
 	z-index: 2;
-	/* Continuous zoom-out animation from center while slide is showing */
-	animation: image-zoom-out 30s ease-out
-		forwards;
 	background-position: center center;
 	transform-origin: center center;
+}
+
+/* Zoom animation only for landscape images */
+.slider-slide.active.landscape {
+	/* Continuous zoom-out animation from center while slide is showing */
+	animation: image-zoom-out 30s ease-out forwards;
+}
+
+/* Portrait images don't need zoom animation */
+.slider-slide.active.portrait {
+	animation: none;
 }
 
 /* Smooth crossfade animation with zoom-out effect */
