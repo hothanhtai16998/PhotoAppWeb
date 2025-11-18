@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import './Slider.css';
 import { imageService } from '@/services/imageService';
 import type { Image } from '@/types/image';
@@ -14,6 +14,7 @@ interface Slide {
 }
 
 const AUTO_PLAY_INTERVAL = 5000; // 5 seconds
+const SWIPE_THRESHOLD = 50; // Minimum distance for swipe
 
 function Slider() {
     const [slides, setSlides] = useState<Slide[]>([]);
@@ -24,6 +25,11 @@ function Slider() {
     const [animatingSlide, setAnimatingSlide] = useState<number | null>(null);
     const [progress, setProgress] = useState(0);
     const [showProgress, setShowProgress] = useState(false);
+    
+    // Touch/swipe handlers
+    const touchStartX = useRef<number>(0);
+    const touchEndX = useRef<number>(0);
+    const sliderRef = useRef<HTMLDivElement>(null);
 
     // Fetch images from backend
     useEffect(() => {
@@ -184,6 +190,34 @@ function Slider() {
         return () => window.removeEventListener('keydown', handleKeyPress);
     }, [goToNext, goToPrev]);
 
+    // Touch/swipe handlers
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        touchEndX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = () => {
+        if (!touchStartX.current) return;
+        
+        const endX = touchEndX.current || touchStartX.current;
+        const distance = touchStartX.current - endX;
+        const isLeftSwipe = distance > SWIPE_THRESHOLD;
+        const isRightSwipe = distance < -SWIPE_THRESHOLD;
+
+        if (isLeftSwipe) {
+            goToNext();
+        } else if (isRightSwipe) {
+            goToPrev();
+        }
+
+        // Reset
+        touchStartX.current = 0;
+        touchEndX.current = 0;
+    };
+
     // Initialize first slide when slides are loaded
     useEffect(() => {
         if (slides.length > 0 && !loading) {
@@ -232,7 +266,13 @@ function Slider() {
     }
 
     return (
-        <div className="slider-page">
+        <div 
+            className="slider-page"
+            ref={sliderRef}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+        >
             {/* Slides Container */}
             <div className="slider-container">
                 {slides.map((slide, index) => {

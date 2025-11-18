@@ -16,7 +16,8 @@ const ImageGrid = () => {
   // Initial load
   useEffect(() => {
     fetchImages();
-  }, [fetchImages]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Note: Header component handles the refresh event to maintain category filters
   // ImageGrid doesn't need to listen to refresh events to avoid conflicts
@@ -58,7 +59,8 @@ const ImageGrid = () => {
     return () => {
       observer.disconnect();
     };
-  }, [pagination, loading, fetchImages, currentSearch, currentCategory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination, loading, currentSearch, currentCategory]);
 
   // Group images by category to create collections
   const collections = useMemo(() => {
@@ -231,77 +233,6 @@ const ImageGrid = () => {
 
   return (
     <div className="image-grid-container">
-      {/* Collections Section */}
-      {collections.length > 0 && (
-        <div className="collections-section">
-          <div className="section-header">
-            <h2 className="section-title">Collections</h2>
-            <button className="see-all-link">See all</button>
-          </div>
-          <div className="collections-grid">
-            {collections.map((collection, idx) => (
-              <div key={idx} className="collection-card">
-                <div className="collection-thumbnails">
-                  {collection.images.length > 0 && (
-                    <>
-                      <div className="collection-main-thumb">
-                        <ProgressiveImage
-                          src={collection.images[0].imageUrl}
-                          thumbnailUrl={collection.images[0].thumbnailUrl}
-                          smallUrl={collection.images[0].smallUrl}
-                          alt={collection.name}
-                        />
-                      </div>
-                      {collection.images.length > 1 && (
-                        <div className="collection-side-thumbs">
-                          {collection.images.slice(1, 3).map((img, i) => (
-                            <div key={i} className="collection-side-thumb">
-                              <ProgressiveImage
-                                src={img.imageUrl}
-                                thumbnailUrl={img.thumbnailUrl}
-                                smallUrl={img.smallUrl}
-                                alt=""
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-                <div className="collection-info">
-                  <h3 className="collection-name">{collection.name}</h3>
-                  <p className="collection-count">{collection.count} images</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Trending Searches Section */}
-      <div className="trending-section">
-        <div className="trending-header">
-          <TrendingUp size={20} className="trend-icon" />
-          <h2 className="section-title">Trending searches</h2>
-        </div>
-        <div className="trending-tags">
-          {trendingSearches.map((search, idx) => (
-            <button
-              key={idx}
-              className="trending-tag"
-              onClick={() => handleTrendingClick(search)}
-            >
-              {search}
-            </button>
-          ))}
-        </div>
-        <button className="see-trending-link">
-          See trending searches
-          <ChevronRight size={16} />
-        </button>
-      </div>
-
       {/* Main Image Grid */}
       {images.length === 0 ? (
         <div className="empty-state">

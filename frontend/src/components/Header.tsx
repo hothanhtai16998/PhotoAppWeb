@@ -5,7 +5,6 @@ import { Link, useNavigate, useLocation } from "react-router-dom"
 import { Search, X, Shield } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useImageStore } from "@/stores/useImageStore"
-import { categoryService, type Category } from "@/services/categoryService"
 import UploadModal from "./UploadModal"
 import './Header.css'
 
@@ -15,27 +14,8 @@ export const Header = memo(function Header() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeCategory, setActiveCategory] = useState('Tất cả')
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
-  const [categories, setCategories] = useState<string[]>(['Tất cả'])
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Fetch categories from backend
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const fetchedCategories = await categoryService.fetchCategories()
-        // Map to category names and add 'Tất cả' at the beginning
-        const categoryNames = ['Tất cả', ...fetchedCategories.map((cat: Category) => cat.name)]
-        setCategories(categoryNames)
-      } catch (error) {
-        console.error('Failed to load categories:', error)
-        // Fallback to default categories if API fails
-        setCategories(['Tất cả', 'Nature', 'Portrait', 'Architecture', 'Travel', 'Street', 'Abstract'])
-      }
-    }
-    loadCategories()
-  }, [])
 
   // Debounced search effect
   useEffect(() => {
@@ -47,7 +27,6 @@ export const Header = memo(function Header() {
       if (location.pathname === '/') {
         fetchImages({
           search: searchQuery || undefined,
-          category: activeCategory !== 'Tất cả' ? activeCategory : undefined,
         })
       }
     }, 500)
@@ -57,7 +36,8 @@ export const Header = memo(function Header() {
         clearTimeout(debounceTimerRef.current)
       }
     }
-  }, [searchQuery, activeCategory, fetchImages, location.pathname])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, location.pathname])
 
   // Listen for refresh event after image upload and re-fetch with current category
   useEffect(() => {
@@ -71,8 +51,6 @@ export const Header = memo(function Header() {
           fetchImages({
             page: 1,
             _refresh: true,
-            // Use current category - if "Tất cả", show all; otherwise filter by category
-            category: activeCategory !== 'Tất cả' ? activeCategory : undefined,
             search: searchQuery || undefined,
           }).catch((error) => {
             console.error('Error refreshing images after upload:', error);
@@ -87,7 +65,8 @@ export const Header = memo(function Header() {
     return () => {
       window.removeEventListener('refreshImages', handleRefresh)
     }
-  }, [activeCategory, searchQuery, fetchImages, location.pathname])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, location.pathname])
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -96,23 +75,11 @@ export const Header = memo(function Header() {
     }
     fetchImages({
       search: searchQuery || undefined,
-      category: activeCategory !== 'Tất cả' ? activeCategory : undefined,
-    })
-  }
-
-  const handleCategoryClick = (category: string) => {
-    setActiveCategory(category)
-    if (location.pathname !== '/') {
-      navigate('/')
-    }
-    fetchImages({
-      category: category !== 'Tất cả' ? category : undefined,
     })
   }
 
   const handleLogoClick = () => {
     setSearchQuery('')
-    setActiveCategory('Tất cả')
     if (location.pathname !== '/') {
       navigate('/')
     } else {
@@ -185,23 +152,6 @@ export const Header = memo(function Header() {
               </>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Category Navigation */}
-      <div className="header-categories">
-        <div className="header-container">
-          <nav className="category-nav">
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => handleCategoryClick(category)}
-                className={`category-link ${activeCategory === category ? 'active' : ''}`}
-              >
-                {category}
-              </button>
-            ))}
-          </nav>
         </div>
       </div>
 

@@ -122,6 +122,12 @@ export const useImageStore = create(
 			category?: string;
 			_refresh?: boolean;
 		}) => {
+			// Prevent concurrent requests - if already loading and not a refresh, skip
+			const currentState = useImageStore.getState();
+			if (currentState.loading && !params?._refresh) {
+				return;
+			}
+
 			set((state) => {
 				state.loading = true;
 				state.error = null;
