@@ -65,15 +65,27 @@ export const imageService = {
 				onUploadProgress: (
 					progressEvent
 				) => {
-					if (onUploadProgress && progressEvent.total) {
+					if (
+						onUploadProgress &&
+						progressEvent.total
+					) {
 						// Calculate HTTP upload progress (uploading file to our backend)
 						// Cap at 85% - the remaining 15% is for Cloudinary upload on backend
-						const httpProgress = Math.round(
-							(progressEvent.loaded * 100) / progressEvent.total
-						);
+						const httpProgress =
+							Math.round(
+								(progressEvent.loaded *
+									100) /
+									progressEvent.total
+							);
 						// Show 0-85% during HTTP upload to backend
-						const percentCompleted = Math.min(85, httpProgress);
-						onUploadProgress(percentCompleted);
+						const percentCompleted =
+							Math.min(
+								85,
+								httpProgress
+							);
+						onUploadProgress(
+							percentCompleted
+						);
 					}
 				},
 			}
@@ -83,7 +95,9 @@ export const imageService = {
 	},
 
 	fetchImages: async (
-		params?: FetchImagesParams & { _refresh?: boolean }
+		params?: FetchImagesParams & {
+			_refresh?: boolean;
+		}
 	): Promise<FetchImagesResponse> => {
 		const queryParams =
 			new URLSearchParams();
@@ -112,10 +126,13 @@ export const imageService = {
 				params.category
 			);
 		}
-		
+
 		// Add cache-busting timestamp if refresh is requested
 		if (params?._refresh) {
-			queryParams.append('_t', Date.now().toString());
+			queryParams.append(
+				'_t',
+				Date.now().toString()
+			);
 		}
 
 		const queryString =
@@ -126,8 +143,7 @@ export const imageService = {
 
 		const res = await api.get(url, {
 			withCredentials: true,
-			// Force fresh fetch by bypassing cache
-			headers: params?._refresh ? { 'Cache-Control': 'no-cache' } : undefined,
+			// Cache busting is handled by timestamp query parameter (_t)
 		});
 
 		// Handle both old format (just images array) and new format (with pagination)
@@ -139,31 +155,43 @@ export const imageService = {
 
 	fetchUserImages: async (
 		userId: string,
-		params?: FetchImagesParams & { _refresh?: boolean }
+		params?: FetchImagesParams & {
+			_refresh?: boolean;
+		}
 	): Promise<FetchImagesResponse> => {
-		const queryParams = new URLSearchParams();
+		const queryParams =
+			new URLSearchParams();
 
 		if (params?.page) {
-			queryParams.append('page', params.page.toString());
+			queryParams.append(
+				'page',
+				params.page.toString()
+			);
 		}
 		if (params?.limit) {
-			queryParams.append('limit', params.limit.toString());
-		}
-		
-		// Add cache-busting timestamp if refresh is requested
-		if (params?._refresh) {
-			queryParams.append('_t', Date.now().toString());
+			queryParams.append(
+				'limit',
+				params.limit.toString()
+			);
 		}
 
-		const queryString = queryParams.toString();
+		// Add cache-busting timestamp if refresh is requested
+		if (params?._refresh) {
+			queryParams.append(
+				'_t',
+				Date.now().toString()
+			);
+		}
+
+		const queryString =
+			queryParams.toString();
 		const url = queryString
 			? `/images/user/${userId}?${queryString}`
 			: `/images/user/${userId}`;
 
 		const res = await api.get(url, {
 			withCredentials: true,
-			// Force fresh fetch by bypassing cache
-			headers: params?._refresh ? { 'Cache-Control': 'no-cache' } : undefined,
+			// Cache busting is handled by timestamp query parameter (_t)
 		});
 
 		if (res.data.images) {
