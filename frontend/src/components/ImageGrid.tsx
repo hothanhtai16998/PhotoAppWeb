@@ -3,6 +3,7 @@ import { useImageStore } from '@/stores/useImageStore';
 import { ChevronRight, TrendingUp, Download } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
+import CategoryNavigation from './CategoryNavigation';
 import { toast } from 'sonner';
 import './ImageGrid.css';
 
@@ -233,6 +234,9 @@ const ImageGrid = () => {
 
   return (
     <div className="image-grid-container">
+      {/* Category Navigation */}
+      <CategoryNavigation />
+      
       {/* Main Image Grid */}
       {images.length === 0 ? (
         <div className="empty-state">
