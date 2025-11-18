@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useImageStore } from "@/stores/useImageStore"
 import { categoryService, type Category } from "@/services/categoryService"
@@ -11,7 +11,44 @@ export function CategoryNavigation() {
   const navigate = useNavigate()
   const location = useLocation()
   const [categories, setCategories] = useState<string[]>(['Tất cả'])
+  const [headerHeight, setHeaderHeight] = useState(0)
+  const categoryNavRef = useRef<HTMLDivElement>(null)
   const activeCategory = currentCategory || 'Tất cả'
+
+  // Calculate header height for sticky positioning
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      const header = document.querySelector('.unsplash-header') as HTMLElement
+      if (header) {
+        const height = header.offsetHeight
+        setHeaderHeight(height)
+        // Set CSS variable for use in CSS
+        document.documentElement.style.setProperty('--header-height', `${height}px`)
+      }
+    }
+
+    // Initial calculation
+    updateHeaderHeight()
+
+    // Update on window resize
+    window.addEventListener('resize', updateHeaderHeight)
+    
+    // Use ResizeObserver to watch for header size changes
+    const header = document.querySelector('.unsplash-header')
+    if (header) {
+      const resizeObserver = new ResizeObserver(updateHeaderHeight)
+      resizeObserver.observe(header)
+      
+      return () => {
+        window.removeEventListener('resize', updateHeaderHeight)
+        resizeObserver.disconnect()
+      }
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateHeaderHeight)
+    }
+  }, [])
 
   // Fetch categories from backend
   useEffect(() => {
@@ -45,7 +82,13 @@ export function CategoryNavigation() {
   }
 
   return (
-    <div className="category-navigation-container">
+    <div 
+      className="category-navigation-container"
+      ref={categoryNavRef}
+      style={{
+        top: `${headerHeight}px`
+      }}
+    >
       <div className="category-navigation-wrapper">
         <nav className="category-navigation">
           {categories.map((category) => (
