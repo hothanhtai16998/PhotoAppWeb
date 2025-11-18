@@ -29,10 +29,21 @@
 	background-position: center;
 	background-repeat: no-repeat;
 	opacity: 0;
-	transition: opacity 1.2s ease-in-out;
+	transform: scale(1.15) translateZ(0);
+	transition: opacity 1.2s ease-in-out,
+		transform 1.2s ease-in-out;
 	z-index: 1;
-	will-change: opacity;
+	will-change: opacity, transform;
 	visibility: hidden;
+	/* Prevent pixelation with high-quality image rendering */
+	image-rendering: -webkit-optimize-contrast;
+	image-rendering: auto;
+	-ms-interpolation-mode: bicubic;
+	backface-visibility: hidden;
+	/* Ensure smooth scaling */
+	-webkit-backface-visibility: hidden;
+	-moz-backface-visibility: hidden;
+	transform-origin: center center;
 }
 
 .slider-slide.visible {
@@ -41,15 +52,17 @@
 
 .slider-slide.active {
 	opacity: 1;
+	transform: scale(1) translateZ(0);
 	z-index: 2;
 }
 
-/* Smooth crossfade animation - pure fade, no transform */
+/* Smooth crossfade animation with zoom-out effect */
 .slider-slide:not(.active):not(
 		.visible
 	) {
 	opacity: 0;
 	visibility: hidden;
+	transform: scale(1.15) translateZ(0);
 }
 
 .slide-overlay {

@@ -1,56 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import './TrainingSliderPage.css';
+import { imageService } from '@/services/imageService';
+import type { Image } from '@/types/image';
 
 interface Slide {
-  id: number;
+  id: string;
   title: string;
-  description: string;
-  buttonText: string;
   backgroundImage: string;
 }
-
-const slides: Slide[] = [
-  {
-    id: 1,
-    title: 'Learn to Ride',
-    description: 'Join us at our Horse Riding Club, where we celebrate the joy of horse riding in a friendly and supportive environment. Everyone is welcome, from beginners to seasoned riders!',
-    buttonText: 'GET STARTED',
-    backgroundImage: 'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=1920&h=1080&fit=crop',
-  },
-  {
-    id: 2,
-    title: 'Master the Craft of horse riding',
-    description: 'Enhance your riding skills under our expert guidance. Our lessons cater to all levels, focusing on safety, skill, and fun in the great outdoors.',
-    buttonText: 'GET STARTED',
-    backgroundImage: 'https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=1920&h=1080&fit=crop',
-  },
-  {
-    id: 3,
-    title: 'Scenic Trails',
-    description: 'Experience the beauty of nature on horseback. Our guided trail rides offer breathtaking views and a perfect way to unwind. It\'s more than a ride; it\'s an exploration',
-    buttonText: 'GET STARTED',
-    backgroundImage: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&h=1080&fit=crop',
-  },
-  {
-    id: 4,
-    title: 'Healing Journey',
-    description: 'Experience the therapeutic power of horse riding at Serenity Stables. Lila\'s approach helps you find inner strength and healing through gentle interactions with our horses.',
-    buttonText: 'GET STARTED',
-    backgroundImage: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=1920&h=1080&fit=crop',
-  },
-  {
-    id: 5,
-    title: 'Adventure Awaits',
-    description: 'Step into the saddle and turn ordinary days into extraordinary adventures. Discover horse riding in its most thrilling form.',
-    buttonText: 'GET STARTED',
-    backgroundImage: 'https://images.unsplash.com/photo-1551963831-b3b1ca40c98e?w=1920&h=1080&fit=crop',
-  },
-];
 
 const AUTO_PLAY_INTERVAL = 5000; // 5 seconds
 
 function TrainingSliderPage() {
+  const [slides, setSlides] = useState<Slide[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
@@ -58,32 +22,98 @@ function TrainingSliderPage() {
   const [progress, setProgress] = useState(0);
   const [showProgress, setShowProgress] = useState(false);
 
+  // Fetch images from backend
+  useEffect(() => {
+    const fetchImages = async () => {
+      try {
+        setLoading(true);
+        const response = await imageService.fetchImages({ 
+          limit: 10, // Fetch up to 10 images for the slider
+          page: 1 
+        });
+        
+        if (response.images && response.images.length > 0) {
+          // Convert images to slides format
+          const slidesData: Slide[] = response.images.map((img: Image) => {
+            // Use full-size imageUrl for best quality to prevent pixelation
+            // imageUrl is the original full-size image, which provides the best quality
+            // For Cloudinary images, if we need specific transformations, we can add them
+            // but for now, using the full-size original ensures no pixelation
+            let imageUrl = img.imageUrl;
+            
+            // Optional: Add Cloudinary transformations for optimal full-screen display
+            // This requests a high-quality version at 1920px width (Full HD)
+            // Only apply if the URL doesn't already have transformations
+            if (imageUrl.includes('cloudinary.com') && 
+                imageUrl.includes('/image/upload/') && 
+                !imageUrl.includes('/image/upload/w_')) {
+              try {
+                // Insert transformation into Cloudinary URL
+                // Format: .../image/upload/{transformations}/{public_id}
+                const uploadIndex = imageUrl.indexOf('/image/upload/');
+                if (uploadIndex !== -1) {
+                  const baseUrl = imageUrl.substring(0, uploadIndex + '/image/upload/'.length);
+                  const restOfUrl = imageUrl.substring(uploadIndex + '/image/upload/'.length);
+                  // w_1920: 1920px width, q_auto: auto quality, f_auto: auto format
+                  imageUrl = `${baseUrl}w_1920,q_auto,f_auto/${restOfUrl}`;
+                }
+              } catch (e) {
+                // If transformation fails, use original URL
+                console.warn('Failed to apply Cloudinary transformation, using original URL');
+              }
+            }
+            
+            return {
+              id: img._id,
+              title: img.imageTitle,
+              backgroundImage: imageUrl,
+            };
+          });
+          
+          setSlides(slidesData);
+          // Reset to first slide when new images are loaded
+          setCurrentSlide(0);
+        } else {
+          // If no images, set empty array
+          setSlides([]);
+        }
+      } catch (error) {
+        console.error('Error fetching images:', error);
+        setSlides([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchImages();
+  }, []);
+
   const goToNext = useCallback(() => {
-    if (isTransitioning) return;
+    if (isTransitioning || slides.length === 0) return;
     setProgress(0);
     setDirection('next');
     setIsTransitioning(true);
     setCurrentSlide((prev) => (prev + 1) % slides.length);
     setTimeout(() => setIsTransitioning(false), 1200);
-  }, [isTransitioning]);
+  }, [isTransitioning, slides.length]);
 
   const goToPrev = useCallback(() => {
-    if (isTransitioning) return;
+    if (isTransitioning || slides.length === 0) return;
     setProgress(0);
     setDirection('prev');
     setIsTransitioning(true);
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
     setTimeout(() => setIsTransitioning(false), 1200);
-  }, [isTransitioning]);
+  }, [isTransitioning, slides.length]);
 
   const goToSlide = useCallback((index: number) => {
-    if (isTransitioning || index === currentSlide) return;
+    if (isTransitioning || index === currentSlide || slides.length === 0) return;
     setProgress(0);
     setDirection(index > currentSlide ? 'next' : 'prev');
     setIsTransitioning(true);
     setCurrentSlide(index);
     setTimeout(() => setIsTransitioning(false), 1200);
-  }, [currentSlide, isTransitioning]);
+  }, [currentSlide, isTransitioning, slides.length]);
 
   // Trigger text animation when slide becomes active
   // Text appears at the same time as image change
@@ -104,7 +134,7 @@ function TrainingSliderPage() {
   // Auto-play functionality with progress indicator
   // Progress circle appears at the same time as image change
   useEffect(() => {
-    if (isTransitioning) {
+    if (isTransitioning || slides.length === 0) {
       setProgress(0);
       setShowProgress(false);
       return;
@@ -132,7 +162,7 @@ function TrainingSliderPage() {
       if (progressInterval) clearInterval(progressInterval);
       if (slideInterval) clearInterval(slideInterval);
     };
-  }, [currentSlide, isTransitioning, goToNext]);
+  }, [currentSlide, isTransitioning, goToNext, slides.length]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -148,14 +178,52 @@ function TrainingSliderPage() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [goToNext, goToPrev]);
 
-  // Initialize first slide on mount
+  // Initialize first slide when slides are loaded
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setAnimatingSlide(0);
-      setShowProgress(true);
-    }, 200);
-    return () => clearTimeout(timer);
-  }, []);
+    if (slides.length > 0 && !loading) {
+      const timer = setTimeout(() => {
+        setAnimatingSlide(0);
+        setShowProgress(true);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [slides.length, loading]);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="training-slider-page">
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100vh',
+          color: 'rgb(236, 222, 195)',
+          fontSize: '18px'
+        }}>
+          Loading images...
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state if no images
+  if (slides.length === 0) {
+    return (
+      <div className="training-slider-page">
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100vh',
+          color: 'rgb(236, 222, 195)',
+          fontSize: '18px'
+        }}>
+          No images available
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="training-slider-page">
