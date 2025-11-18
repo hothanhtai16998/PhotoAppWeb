@@ -8,6 +8,10 @@ interface Slide {
   id: string;
   title: string;
   backgroundImage: string;
+  location?: string;
+  cameraModel?: string;
+  category?: string | { name: string };
+  createdAt?: string;
 }
 
 const AUTO_PLAY_INTERVAL = 5000; // 5 seconds
@@ -27,26 +31,26 @@ function TrainingSliderPage() {
     const fetchImages = async () => {
       try {
         setLoading(true);
-        const response = await imageService.fetchImages({ 
+        const response = await imageService.fetchImages({
           limit: 10, // Fetch up to 10 images for the slider
-          page: 1 
+          page: 1
         });
-        
+
         if (response.images && response.images.length > 0) {
           // Convert images to slides format
-          const slidesData: Slide[] = response.images.map((img: Image) => {
+          const slidesData: Slide[] = response.images.map((img: Image, index: number) => {
             // Use full-size imageUrl for best quality to prevent pixelation
             // imageUrl is the original full-size image, which provides the best quality
             // For Cloudinary images, if we need specific transformations, we can add them
             // but for now, using the full-size original ensures no pixelation
             let imageUrl = img.imageUrl;
-            
+
             // Optional: Add Cloudinary transformations for optimal full-screen display
             // This requests a high-quality version at 1920px width (Full HD)
             // Only apply if the URL doesn't already have transformations
-            if (imageUrl.includes('cloudinary.com') && 
-                imageUrl.includes('/image/upload/') && 
-                !imageUrl.includes('/image/upload/w_')) {
+            if (imageUrl.includes('cloudinary.com') &&
+              imageUrl.includes('/image/upload/') &&
+              !imageUrl.includes('/image/upload/w_')) {
               try {
                 // Insert transformation into Cloudinary URL
                 // Format: .../image/upload/{transformations}/{public_id}
@@ -62,14 +66,25 @@ function TrainingSliderPage() {
                 console.warn('Failed to apply Cloudinary transformation, using original URL');
               }
             }
-            
-            return {
+
+            const slideData = {
               id: img._id,
               title: img.imageTitle,
               backgroundImage: imageUrl,
+              location: img.location,
+              cameraModel: img.cameraModel,
+              category: img.imageCategory,
+              createdAt: img.createdAt,
             };
+
+            // Debug: Log slide data to verify info is available
+            if (index === 0) {
+              console.log('First slide data:', slideData);
+            }
+
+            return slideData;
           });
-          
+
           setSlides(slidesData);
           // Reset to first slide when new images are loaded
           setCurrentSlide(0);
@@ -123,7 +138,7 @@ function TrainingSliderPage() {
       setAnimatingSlide(null);
       return;
     }
-    
+
     // Trigger animation when transition completes (image is visible)
     const timer = setTimeout(() => {
       setAnimatingSlide(currentSlide);
@@ -142,12 +157,12 @@ function TrainingSliderPage() {
 
     setProgress(0);
     setShowProgress(true); // Show immediately when transition completes
-    
+
     let progressInterval: NodeJS.Timeout | null = null;
     let slideInterval: NodeJS.Timeout | null = null;
-    
+
     const startTime = Date.now();
-    
+
     progressInterval = setInterval(() => {
       const elapsed = Date.now() - startTime;
       const newProgress = Math.min((elapsed / AUTO_PLAY_INTERVAL) * 100, 100);
@@ -193,10 +208,10 @@ function TrainingSliderPage() {
   if (loading) {
     return (
       <div className="training-slider-page">
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
           height: '100vh',
           color: 'rgb(236, 222, 195)',
           fontSize: '18px'
@@ -211,10 +226,10 @@ function TrainingSliderPage() {
   if (slides.length === 0) {
     return (
       <div className="training-slider-page">
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
           height: '100vh',
           color: 'rgb(236, 222, 195)',
           fontSize: '18px'
@@ -234,66 +249,83 @@ function TrainingSliderPage() {
           const isPrev = index === (currentSlide - 1 + slides.length) % slides.length;
           const isNext = index === (currentSlide + 1) % slides.length;
           const shouldShow = isActive || (isTransitioning && (isPrev || isNext));
-          
+
           return (
-          <div
-            key={slide.id}
-            className={`slider-slide ${isActive ? 'active' : ''} ${shouldShow ? 'visible' : ''}`}
-            style={{
-              backgroundImage: `url(${slide.backgroundImage})`,
-            }}
-          >
-            <div className="slide-overlay"></div>
+            <div
+              key={slide.id}
+              className={`slider-slide ${isActive ? 'active' : ''} ${shouldShow ? 'visible' : ''}`}
+              style={{
+                backgroundImage: `url(${slide.backgroundImage})`,
+              }}
+            >
+              <div className="slide-overlay"></div>
 
-            {/* Title and Navigation in Bottom Left */}
-            <div className={`slide-content-left ${isActive && !isTransitioning && animatingSlide === index ? 'active' : ''}`}>
-              <h1 className={`slide-title ${isActive && !isTransitioning && animatingSlide === index ? 'active' : ''}`}>{slide.title}</h1>
-              <div className="slide-nav-buttons">
-                <button
-                  className="slide-nav-btn prev-btn"
-                  onClick={goToPrev}
-                  aria-label="Previous slide"
-                >
-                  PREV
-                </button>
-                <span className="nav-separator">/</span>
-                <button
-                  className="slide-nav-btn next-btn"
-                  onClick={goToNext}
-                  aria-label="Next slide"
-                >
-                  NEXT
-                </button>
+              {/* Title and Navigation in Bottom Left */}
+              <div className={`slide-content-left ${isActive && !isTransitioning && animatingSlide === index ? 'active' : ''}`}>
+                <h1 className={`slide-title ${isActive && !isTransitioning && animatingSlide === index ? 'active' : ''}`}>{slide.title}</h1>
+                <div className="slide-nav-buttons">
+                  <button
+                    className="slide-nav-btn prev-btn"
+                    onClick={goToPrev}
+                    aria-label="Previous slide"
+                  >
+                    Quay lại
+                  </button>
+                  <span className="nav-separator">/</span>
+                  <button
+                    className="slide-nav-btn next-btn"
+                    onClick={goToNext}
+                    aria-label="Next slide"
+                  >
+                    Tiép theo
+                  </button>
+                </div>
               </div>
+
+              {/* Image Info in Bottom Right */}
+              {(slide.location || slide.cameraModel || slide.createdAt) && (
+                <div className={`slide-content-right ${isActive && !isTransitioning && animatingSlide === index ? 'active' : ''}`}>
+                  <div className="image-info-box">
+                    {slide.location && (
+                      <div className="info-item">
+                        <span className="info-label">Địa điểm:</span>
+                        <span className="info-value">{slide.location}</span>
+                      </div>
+                    )}
+                    {slide.cameraModel && (
+                      <div className="info-item">
+                        <span className="info-label">Camera:</span>
+                        <span className="info-value">{slide.cameraModel}</span>
+                      </div>
+                    )}
+
+                    {slide.createdAt && (
+                      <div className="info-item">
+                        <span className="info-label">Ngày:</span>
+                        <span className="info-value">
+                          {new Date(slide.createdAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
             </div>
-
-            {/* Description Box in Bottom Right */}
-            {/* <div className="slide-content-right">
-              <div className="description-box">
-                <p className="slide-description">{slide.description}</p>
-                <button className="slide-button">
-                  GET STARTED
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            </div> */}
-          </div>
-        );
+          );
         })}
       </div>
 
       {/* Brown Block in Bottom Left */}
-      <div className="brown-block-bottom"></div>
-      <div className="brown-block-bottom-2"></div>
-
-      {/* Right Side Navigation with S Icon */}
-      <div className="slider-right-nav">
-        <div className="nav-icon-s">S</div>
-      </div>
+      <div className="block-top-right"></div>
+      <div className="block-bottom"></div>
+      <div className="block-bottom-2"></div>
 
 
-      {/* Right Scrollbar */}
-      <div className="custom-scrollbar"></div>
 
       {/* Circular Progress Indicator - Bottom Right */}
       <div className={`progress-indicator ${showProgress ? 'visible' : ''}`}>
@@ -301,22 +333,22 @@ function TrainingSliderPage() {
           <circle
             className="progress-ring-circle-bg"
             stroke="rgba(236, 222, 195, 0.2)"
-            strokeWidth="2"
+            strokeWidth="5"
             fill="transparent"
-            r="26"
+            r="20"
             cx="30"
             cy="30"
           />
           <circle
             className="progress-ring-circle"
             stroke="rgb(236, 222, 195)"
-            strokeWidth="2"
+            strokeWidth="5"
             fill="transparent"
-            r="26"
+            r="20"
             cx="30"
             cy="30"
-            strokeDasharray={`${2 * Math.PI * 26}`}
-            strokeDashoffset={`${2 * Math.PI * 26 * (1 - progress / 100)}`}
+            strokeDasharray={`${2 * Math.PI * 20}`}
+            strokeDashoffset={`${2 * Math.PI * 20 * (1 - progress / 100)}`}
             strokeLinecap="round"
           />
         </svg>
