@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useImageStore } from '@/stores/useImageStore';
-import { ChevronRight, TrendingUp, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
 import CategoryNavigation from './CategoryNavigation';
@@ -9,7 +9,6 @@ import './ImageGrid.css';
 
 const ImageGrid = () => {
   const { images, loading, error, pagination, currentSearch, currentCategory, fetchImages } = useImageStore();
-  const trendingSearches = ['School Library', 'Dentist', 'Thanksgiving', 'Christmas Background', 'Dollar', 'Beautiful House'];
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const isLoadingMoreRef = useRef(false);
@@ -63,34 +62,34 @@ const ImageGrid = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination, loading, currentSearch, currentCategory]);
 
-  // Group images by category to create collections
-  const collections = useMemo(() => {
-    if (images.length === 0) return [];
+  // Group images by category to create collections (currently unused, kept for future use)
+  // const collections = useMemo(() => {
+  //   if (images.length === 0) return [];
 
-    const categoryMap = new Map<string, Image[]>();
-    images.forEach(img => {
-      if (img.imageCategory) {
-        const category = typeof img.imageCategory === 'string'
-          ? img.imageCategory
-          : img.imageCategory?.name;
-        if (category) {
-          if (!categoryMap.has(category)) {
-            categoryMap.set(category, []);
-          }
-          categoryMap.get(category)!.push(img);
-        }
-      }
-    });
+  //   const categoryMap = new Map<string, Image[]>();
+  //   images.forEach(img => {
+  //     if (img.imageCategory) {
+  //       const category = typeof img.imageCategory === 'string'
+  //         ? img.imageCategory
+  //         : img.imageCategory?.name;
+  //       if (category) {
+  //         if (!categoryMap.has(category)) {
+  //           categoryMap.set(category, []);
+  //         }
+  //         categoryMap.get(category)!.push(img);
+  //       }
+  //     }
+  //   });
 
-    return Array.from(categoryMap.entries())
-      .map(([name, imgs]) => ({
-        name,
-        images: imgs.slice(0, 4),
-        count: imgs.length
-      }))
-      .filter(col => col.count >= 2)
-      .slice(0, 4);
-  }, [images]);
+  //   return Array.from(categoryMap.entries())
+  //     .map(([name, imgs]) => ({
+  //       name,
+  //       images: imgs.slice(0, 4),
+  //       count: imgs.length
+  //     }))
+  //     .filter(col => col.count >= 2)
+  //     .slice(0, 4);
+  // }, [images]);
 
   // Track image aspect ratios (portrait vs landscape)
   const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
@@ -117,9 +116,9 @@ const ImageGrid = () => {
     });
   }, [currentImageIds]);
 
-  const handleTrendingClick = (search: string) => {
-    fetchImages({ search, page: 1 });
-  };
+  // const handleTrendingClick = (search: string) => {
+  //   fetchImages({ search, page: 1 });
+  // };
 
   // Download image function - handles CORS and Cloudinary URLs
   // Fetches the original/highest quality image from Cloudinary

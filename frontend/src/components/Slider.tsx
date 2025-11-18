@@ -22,7 +22,6 @@ function Slider() {
     const [loading, setLoading] = useState(true);
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isTransitioning, setIsTransitioning] = useState(false);
-    const [direction, setDirection] = useState<'next' | 'prev'>('next');
     const [animatingSlide, setAnimatingSlide] = useState<number | null>(null);
     const [progress, setProgress] = useState(0);
     const [showProgress, setShowProgress] = useState(false);
@@ -77,7 +76,7 @@ function Slider() {
                         let isPortrait = false;
                         try {
                             await Promise.race([
-                                new Promise<void>((resolve, reject) => {
+                                new Promise<void>((resolve) => {
                                     const testImg = new Image();
                                     testImg.crossOrigin = 'anonymous';
                                     testImg.onload = () => {
@@ -103,7 +102,6 @@ function Slider() {
                         const slideData: Slide = {
                             id: img._id,
                             title: img.imageTitle,
-                            uploadBy: img.uploadedBy,
                             backgroundImage: imageUrl,
                             location: img.location,
                             cameraModel: img.cameraModel,

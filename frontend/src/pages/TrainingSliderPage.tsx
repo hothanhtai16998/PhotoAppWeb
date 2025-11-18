@@ -117,13 +117,13 @@ function TrainingSliderPage() {
     setTimeout(() => setIsTransitioning(false), 1200);
   }, [isTransitioning, slides.length]);
 
-  const goToSlide = useCallback((index: number) => {
-    if (isTransitioning || index === currentSlide || slides.length === 0) return;
-    setProgress(0);
-    setIsTransitioning(true);
-    setCurrentSlide(index);
-    setTimeout(() => setIsTransitioning(false), 1200);
-  }, [currentSlide, isTransitioning, slides.length]);
+  // const goToSlide = useCallback((index: number) => {
+  //   if (isTransitioning || index === currentSlide || slides.length === 0) return;
+  //   setProgress(0);
+  //   setIsTransitioning(true);
+  //   setCurrentSlide(index);
+  //   setTimeout(() => setIsTransitioning(false), 1200);
+  // }, [currentSlide, isTransitioning, slides.length]);
 
   // Trigger text animation when slide becomes active
   // Text appears at the same time as image change
