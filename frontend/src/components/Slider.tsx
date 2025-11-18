@@ -140,7 +140,6 @@ function Slider() {
     const goToNext = useCallback(() => {
         if (isTransitioning || slides.length === 0) return;
         setProgress(0);
-        setDirection('next');
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev + 1) % slides.length);
         setTimeout(() => setIsTransitioning(false), 1200);
@@ -149,7 +148,6 @@ function Slider() {
     const goToPrev = useCallback(() => {
         if (isTransitioning || slides.length === 0) return;
         setProgress(0);
-        setDirection('prev');
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
         setTimeout(() => setIsTransitioning(false), 1200);
