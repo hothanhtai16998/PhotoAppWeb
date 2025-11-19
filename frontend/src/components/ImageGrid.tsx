@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useImageStore } from '@/stores/useImageStore';
-import { Download } from 'lucide-react';
+import {
+  Download,
+  Bookmark,
+  Plus,
+  Edit,
+  Share2,
+  Info,
+  MoreVertical,
+  ZoomIn,
+  CheckCircle2,
+  ChevronDown,
+  X
+} from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
 import CategoryNavigation from './CategoryNavigation';
@@ -12,12 +24,33 @@ const ImageGrid = () => {
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const isLoadingMoreRef = useRef(false);
+  const [selectedImage, setSelectedImage] = useState<Image | null>(null);
 
   // Initial load
   useEffect(() => {
     fetchImages();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedImage) {
+        setSelectedImage(null);
+      }
+    };
+
+    if (selectedImage) {
+      document.addEventListener('keydown', handleEscape);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = '';
+    };
+  }, [selectedImage]);
 
   // Note: Header component handles the refresh event to maintain category filters
   // ImageGrid doesn't need to listen to refresh events to avoid conflicts
@@ -257,16 +290,15 @@ const ImageGrid = () => {
                 <div
                   className="masonry-link"
                   onClick={() => {
-                    // Open image in new tab as fallback
-                    window.open(image.imageUrl, '_blank', 'noopener,noreferrer')
+                    setSelectedImage(image);
                   }}
                   style={{ cursor: 'pointer' }}
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      window.open(image.imageUrl, '_blank', 'noopener,noreferrer')
+                      e.preventDefault();
+                      setSelectedImage(image);
                     }
                   }}
                   aria-label={`View ${image.imageTitle || 'image'}`}
@@ -378,6 +410,126 @@ const ImageGrid = () => {
         <div className="end-of-results">
           <p>Tất cả ảnh đã được hiển thị</p>
         </div>
+      )}
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <>
+          <div
+            className="image-modal-overlay"
+            onClick={() => setSelectedImage(null)}
+          />
+          <div
+            className="image-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="image-modal-header">
+              {/* Left: User Info */}
+              <div className="modal-header-left">
+                {selectedImage.uploadedBy.avatarUrl ? (
+                  <img
+                    src={selectedImage.uploadedBy.avatarUrl}
+                    alt={selectedImage.uploadedBy.displayName || selectedImage.uploadedBy.username}
+                    className="modal-user-avatar"
+                  />
+                ) : (
+                  <div className="modal-user-avatar-placeholder">
+                    {(selectedImage.uploadedBy.displayName || selectedImage.uploadedBy.username || 'U').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="modal-user-info">
+                  <div className="modal-user-name">
+                    {selectedImage.uploadedBy.displayName?.trim() || selectedImage.uploadedBy.username}
+                    <CheckCircle2 className="verified-badge" size={16} />
+                  </div>
+                  <div className="modal-user-status">Available for hire</div>
+                </div>
+              </div>
+
+              {/* Right: Action Buttons */}
+              <div className="modal-header-right">
+                <button className="modal-action-btn" title="Save">
+                  <Bookmark size={20} />
+                </button>
+                <button className="modal-action-btn" title="Add">
+                  <Plus size={20} />
+                </button>
+                <button className="modal-action-btn" title="Edit image">
+                  <Edit size={20} />
+                </button>
+                <button
+                  className="modal-download-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownloadImage(selectedImage, e);
+                  }}
+                  title="Download"
+                >
+                  <span>Download</span>
+                  <ChevronDown size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Image Content */}
+            <div className="image-modal-content">
+              <img
+                src={selectedImage.imageUrl}
+                alt={selectedImage.imageTitle || 'Photo'}
+                className="modal-image"
+              />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="image-modal-footer">
+              {/* Left: Stats */}
+              <div className="modal-footer-left">
+                <div className="modal-stat">
+                  <span className="stat-label">Views</span>
+                  <span className="stat-value">292,310</span>
+                </div>
+                <div className="modal-stat">
+                  <span className="stat-label">Downloads</span>
+                  <span className="stat-value">2,213</span>
+                </div>
+              </div>
+
+              {/* Center: Featured & Zoom */}
+              <div className="modal-footer-center">
+                <div className="modal-featured">Featured in Photos</div>
+                <button className="modal-zoom-btn">
+                  <ZoomIn size={16} />
+                  <span>Zoom in on this image</span>
+                </button>
+              </div>
+
+              {/* Right: Actions */}
+              <div className="modal-footer-right">
+                <button className="modal-footer-btn">
+                  <Share2 size={18} />
+                  <span>Share</span>
+                </button>
+                <button className="modal-footer-btn">
+                  <Info size={18} />
+                  <span>Info</span>
+                </button>
+                <button className="modal-footer-btn">
+                  <MoreVertical size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Close Button */}
+            <button
+              className="modal-close-btn"
+              onClick={() => setSelectedImage(null)}
+              aria-label="Close modal"
+            >
+              <X size={24} />
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
