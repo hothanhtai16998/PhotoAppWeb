@@ -52,6 +52,16 @@ const imageSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
+        views: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
+        downloads: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
     },
     {
         timestamps: true,

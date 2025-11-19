@@ -1,18 +1,14 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import {
-  Bookmark,
-  Plus,
-  Edit,
   Share2,
   Info,
   MoreVertical,
-  ZoomIn,
   CheckCircle2,
   ChevronDown,
-  X
 } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
+import { imageService } from '@/services/imageService';
 import './ImageModal.css';
 
 interface ImageModalProps {
@@ -42,11 +38,44 @@ const ImageModal = ({
   const relatedImagesLoadMoreRef = useRef<HTMLDivElement>(null);
   const [relatedImagesLimit, setRelatedImagesLimit] = useState(12);
   const [isLoadingRelatedImages, setIsLoadingRelatedImages] = useState(false);
+  const [views, setViews] = useState<number>(image.views || 0);
+  const [downloads, setDownloads] = useState<number>(image.downloads || 0);
+  const incrementedViewIds = useRef<Set<string>>(new Set());
+  const currentImageIdRef = useRef<string | null>(null);
 
-  // Reset related images limit when image changes
+  // Reset related images limit and update stats when image changes
   useEffect(() => {
     setRelatedImagesLimit(12);
+    setViews(image.views || 0);
+    setDownloads(image.downloads || 0);
+    currentImageIdRef.current = image._id;
   }, [image]);
+
+  // Increment view count when modal opens (only once per image)
+  useEffect(() => {
+    const imageId = image._id;
+    // Only increment if we haven't incremented for this image ID before
+    if (imageId && !incrementedViewIds.current.has(imageId)) {
+      incrementedViewIds.current.add(imageId);
+      imageService.incrementView(imageId)
+        .then((response) => {
+          setViews(response.views);
+          // Update the image in the parent component and store
+          // Use the current image from the ref to avoid stale closure
+          const currentImage = image;
+          if (onImageSelect && currentImage) {
+            onImageSelect({ ...currentImage, views: response.views });
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to increment view:', error);
+          // Remove from set on error so it can be retried
+          incrementedViewIds.current.delete(imageId);
+        });
+    }
+    // Only depend on image._id to avoid re-running when image object changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [image._id]);
 
   // Get related images (same category, excluding current image) with infinite scroll
   const relatedImages = useMemo(() => {
@@ -228,8 +257,20 @@ const ImageModal = ({
             </button> */}
             <button
               className="modal-download-btn"
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.stopPropagation();
+                // Increment download count
+                try {
+                  const response = await imageService.incrementDownload(image._id);
+                  setDownloads(response.downloads);
+                  // Update the image in the parent component and store
+                  if (onImageSelect) {
+                    onImageSelect({ ...image, downloads: response.downloads });
+                  }
+                } catch (error) {
+                  console.error('Failed to increment download:', error);
+                }
+                // Then trigger the download
                 onDownload(image, e);
               }}
               title="Download"
@@ -261,11 +302,11 @@ const ImageModal = ({
               <div className="modal-footer-left-stats">
                 <div className="modal-stat">
                   <span className="stat-label">Views</span>
-                  <span className="stat-value">292,310</span>
+                  <span className="stat-value">{views.toLocaleString()}</span>
                 </div>
                 <div className="modal-stat">
                   <span className="stat-label">Downloads</span>
-                  <span className="stat-value">2,213</span>
+                  <span className="stat-value">{downloads.toLocaleString()}</span>
                 </div>
               </div>
               {/* Image Info */}
@@ -278,6 +319,15 @@ const ImageModal = ({
                     {image.location && <span>{image.location}</span>}
                     {image.location && image.cameraModel && <span> • </span>}
                     {image.cameraModel && <span>{image.cameraModel}</span>}
+                  </div>
+                )}
+                {image.createdAt && (
+                  <div className="image-info-date">
+                    {new Date(image.createdAt).toLocaleDateString('vi-VN', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
                   </div>
                 )}
               </div>

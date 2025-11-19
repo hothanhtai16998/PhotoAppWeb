@@ -16,6 +16,8 @@ export interface Image {
 	uploadedBy: User;
 	location?: string;
 	cameraModel?: string;
+	views?: number;
+	downloads?: number;
 	createdAt: string;
 	updatedAt: string;
 }

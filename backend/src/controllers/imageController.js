@@ -276,6 +276,48 @@ export const uploadImage = asyncHandler(async (req, res) => {
     }
 });
 
+// Increment view count for an image
+export const incrementView = asyncHandler(async (req, res) => {
+    const imageId = req.params.imageId;
+
+    const image = await Image.findByIdAndUpdate(
+        imageId,
+        { $inc: { views: 1 } },
+        { new: true, runValidators: true }
+    );
+
+    if (!image) {
+        return res.status(404).json({
+            message: 'Không tìm thấy ảnh',
+        });
+    }
+
+    res.status(200).json({
+        views: image.views,
+    });
+});
+
+// Increment download count for an image
+export const incrementDownload = asyncHandler(async (req, res) => {
+    const imageId = req.params.imageId;
+
+    const image = await Image.findByIdAndUpdate(
+        imageId,
+        { $inc: { downloads: 1 } },
+        { new: true, runValidators: true }
+    );
+
+    if (!image) {
+        return res.status(404).json({
+            message: 'Không tìm thấy ảnh',
+        });
+    }
+
+    res.status(200).json({
+        downloads: image.downloads,
+    });
+});
+
 export const getImagesByUserId = asyncHandler(async (req, res) => {
     const userId = req.params.userId;
     const page = Math.max(1, parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE);

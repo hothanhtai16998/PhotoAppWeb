@@ -199,4 +199,30 @@ export const imageService = {
 		}
 		return { images: res.data };
 	},
+
+	incrementView: async (
+		imageId: string
+	): Promise<{ views: number }> => {
+		const res = await api.patch(
+			`/images/${imageId}/view`,
+			{},
+			{
+				withCredentials: true,
+			}
+		);
+		return res.data;
+	},
+
+	incrementDownload: async (
+		imageId: string
+	): Promise<{ downloads: number }> => {
+		const res = await api.patch(
+			`/images/${imageId}/download`,
+			{},
+			{
+				withCredentials: true,
+			}
+		);
+		return res.data;
+	},
 };

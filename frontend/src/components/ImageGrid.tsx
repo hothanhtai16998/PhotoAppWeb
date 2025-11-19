@@ -15,6 +15,18 @@ const ImageGrid = () => {
   const isLoadingMoreRef = useRef(false);
   const [selectedImage, setSelectedImage] = useState<Image | null>(null);
 
+  // Update image in the store when stats change
+  const handleImageUpdate = useCallback((updatedImage: Image) => {
+    setSelectedImage(updatedImage);
+    // Update the image in the store's images array
+    useImageStore.setState((state) => {
+      const index = state.images.findIndex(img => img._id === updatedImage._id);
+      if (index !== -1) {
+        state.images[index] = updatedImage;
+      }
+    });
+  }, []);
+
   // Initial load
   useEffect(() => {
     fetchImages();
@@ -388,7 +400,7 @@ const ImageGrid = () => {
           image={selectedImage}
           images={images}
           onClose={() => setSelectedImage(null)}
-          onImageSelect={setSelectedImage}
+          onImageSelect={handleImageUpdate}
           onDownload={handleDownloadImage}
           imageTypes={imageTypes}
           onImageLoad={handleImageLoad}

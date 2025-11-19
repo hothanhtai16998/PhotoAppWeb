@@ -360,6 +360,13 @@
 	line-height: 1.4;
 }
 
+.image-info-date {
+	font-size: 0.8125rem;
+	color: #767676;
+	line-height: 1.4;
+	margin-top: 4px;
+}
+
 .modal-stat {
 	display: flex;
 	flex-direction: column;
