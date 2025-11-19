@@ -19,7 +19,7 @@
 	background: #fff;
 	border-radius: 12px;
 	width: 100%;
-	max-width: 1400px;
+	max-width: 1000px;
 	max-height: 90vh;
 	overflow-y: auto;
 	box-shadow: 0 20px 60px
@@ -512,7 +512,7 @@
 .upload-modal-footer {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: flex-end;
 	padding-top: 24px;
 	border-top: 1px solid #e5e5e5;
 	margin-top: 24px;
