@@ -209,12 +209,18 @@ export const Header = memo(function Header() {
                     setShowSuggestions(false)
                   }}
                   className="search-clear"
+                  aria-label="Clear search"
                 >
-                  <X size={16} />
+                  <X size={16} aria-hidden="true" />
                 </button>
               )}
-              <button type="button" className="search-visual" title="Visual search">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <button 
+                type="button" 
+                className="search-visual" 
+                title="Visual search"
+                aria-label="Visual search (coming soon)"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <rect x="2" y="2" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2" fill="none" />
                   <circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.5" fill="none" />
                 </svg>

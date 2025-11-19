@@ -331,6 +331,7 @@ const ImageGrid = () => {
                     smallUrl={image.smallUrl}
                     regularUrl={image.regularUrl}
                     alt={image.imageTitle || 'Photo'}
+                    fetchPriority={index < 6 ? 'high' : 'auto'}
                     onLoad={(img) => {
                       // Handle image load for aspect ratio detection
                       if (!processedImages.current.has(image._id) && currentImageIds.has(image._id)) {
@@ -370,9 +371,9 @@ const ImageGrid = () => {
                         className="image-action-btn download-btn"
                         onClick={(e) => handleDownloadImage(image, e)}
                         title="Download"
-                        aria-label="Download image"
+                        aria-label={`Download ${image.imageTitle || 'image'}`}
                       >
-                        <Download size={20} />
+                        <Download size={20} aria-hidden="true" />
                       </button>
                     </div>
 

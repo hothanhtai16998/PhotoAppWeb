@@ -248,17 +248,15 @@ function Slider() {
     // Show loading state
     if (loading) {
         return (
-            <div className="training-slider-page">
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    height: '100vh',
-                    color: 'rgb(236, 222, 195)',
-                    fontSize: '18px'
-                }}>
-                    Đang tải ảnh...
-                </div>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '100vh',
+                color: 'rgb(236, 222, 195)',
+                fontSize: '18px'
+            }}>
+                Đang tải ảnh...
             </div>
         );
     }
@@ -266,17 +264,15 @@ function Slider() {
     // Show empty state if no images
     if (slides.length === 0) {
         return (
-            <div className="training-slider-page">
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    height: '100vh',
-                    color: 'rgb(236, 222, 195)',
-                    fontSize: '18px'
-                }}>
-                    Chưa có ảnh
-                </div>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '100vh',
+                color: 'rgb(236, 222, 195)',
+                fontSize: '18px'
+            }}>
+                Chưa có ảnh
             </div>
         );
     }
@@ -308,8 +304,9 @@ function Slider() {
                             {/* Hidden image to detect orientation on load */}
                             <img
                                 src={slide.backgroundImage}
-                                alt=""
+                                alt={slide.title || `Slide ${index + 1}`}
                                 style={{ display: 'none' }}
+                                aria-hidden="true"
                                 onLoad={(e) => {
                                     const img = e.currentTarget;
                                     const isPortraitImg = img.naturalHeight > img.naturalWidth;

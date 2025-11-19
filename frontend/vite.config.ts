@@ -14,4 +14,25 @@ export default defineConfig({
 			),
 		},
 	},
+	build: {
+		// Optimize build for better Lighthouse scores
+		rollupOptions: {
+			output: {
+				manualChunks: {
+					'react-vendor': ['react', 'react-dom', 'react-router', 'react-router-dom'],
+					'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+					'utils-vendor': ['axios', 'zustand', '@tanstack/react-query'],
+					'sentry': ['@sentry/react'],
+				},
+			},
+		},
+		// Enable source maps for production debugging (optional)
+		sourcemap: false,
+		// Optimize chunk size
+		chunkSizeWarningLimit: 1000,
+		// Minify CSS
+		cssMinify: true,
+		// Target modern browsers for smaller bundles
+		target: 'esnext',
+	},
 });

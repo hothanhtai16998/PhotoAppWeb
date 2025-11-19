@@ -1,0 +1,21 @@
+{
+  "name": "PhotoApp - Khám phá và chia sẻ ảnh đẹp",
+  "short_name": "PhotoApp",
+  "description": "Khám phá bộ sưu tập ảnh đẹp, chia sẻ tác phẩm của bạn và tìm cảm hứng từ cộng đồng nhiếp ảnh gia",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["photography", "social", "entertainment"],
+  "lang": "vi"
+}
+

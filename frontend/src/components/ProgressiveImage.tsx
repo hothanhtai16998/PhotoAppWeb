@@ -10,6 +10,7 @@ interface ProgressiveImageProps {
   className?: string;
   onLoad?: (img: HTMLImageElement) => void;
   onError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
+  fetchPriority?: 'high' | 'low' | 'auto';
 }
 
 /**
@@ -74,6 +75,7 @@ const ProgressiveImage = ({
   className = '',
   onLoad,
   onError,
+  fetchPriority = 'auto',
 }: ProgressiveImageProps) => {
   // Suppress unused parameter warning - reserved for future use
   void regularUrl;
@@ -265,6 +267,7 @@ const ProgressiveImage = ({
         onError={handleError}
         loading={shouldLoadEagerly ? 'eager' : 'lazy'}
         decoding="async"
+        fetchPriority={fetchPriority}
       />
       {/* Blur-up overlay effect while loading */}
       {!isLoaded && effectiveThumbnail && (

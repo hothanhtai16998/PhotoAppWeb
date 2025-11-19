@@ -9,13 +9,13 @@ import {
     removeImageFromCollection,
     getPublicCollections,
 } from '../controllers/collectionController.js';
-import { authenticate } from '../middlewares/authenticate.js';
+import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { apiLimiter } from '../middlewares/rateLimiter.js';
 
 const router = express.Router();
 
 // All collection routes require authentication
-router.use(authenticate);
+router.use(protectedRoute);
 
 // Get user's collections
 router.get('/', apiLimiter, getCollections);
