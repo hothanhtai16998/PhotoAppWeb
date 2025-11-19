@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Share2,
   Info,
@@ -452,22 +453,60 @@ const ImageModal = ({
                             const chartInner = chartContainerRef.current.querySelector('.info-chart') as HTMLElement;
                             if (!chartInner) return;
 
-                            const chartInnerRect = chartInner.getBoundingClientRect();
-                            const x = e.clientX - chartInnerRect.left;
-                            const barWidth = chartInnerRect.width / 14;
-                            const barIndex = Math.floor(x / barWidth);
+                            // Get all bar elements to find exact positions
+                            const bars = Array.from(chartInner.querySelectorAll('.info-chart-bar'));
+                            if (bars.length === 0) return;
 
-                            if (barIndex >= 0 && barIndex < chartData.length) {
-                              const data = chartData[barIndex];
+                            const chartInnerRect = chartInner.getBoundingClientRect();
+
+                            // Find which bar the mouse is closest to horizontally
+                            let hoveredBarIndex = -1;
+                            let minDistance = Infinity;
+                            let barCenterX = 0;
+
+                            bars.forEach((bar, index) => {
+                              const barRect = bar.getBoundingClientRect();
+                              const barCenter = barRect.left + (barRect.width / 2);
+                              const distance = Math.abs(e.clientX - barCenter);
+
+                              // Also check if mouse is within the chart area vertically
+                              if (e.clientY >= chartInnerRect.top && e.clientY <= chartInnerRect.bottom) {
+                                if (distance < minDistance) {
+                                  minDistance = distance;
+                                  hoveredBarIndex = index;
+                                  barCenterX = barCenter;
+                                }
+                              }
+                            });
+
+                            if (hoveredBarIndex >= 0 && hoveredBarIndex < chartData.length) {
+                              const data = chartData[hoveredBarIndex];
                               const dateStr = data.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+                              // Ensure tooltip stays within viewport
+                              const tooltipWidth = 200;
+                              const margin = 10;
+                              let finalX = barCenterX;
+
+                              // Adjust if too far right
+                              if (finalX + (tooltipWidth / 2) > window.innerWidth - margin) {
+                                finalX = window.innerWidth - (tooltipWidth / 2) - margin;
+                              }
+
+                              // Adjust if too far left
+                              if (finalX - (tooltipWidth / 2) < margin) {
+                                finalX = (tooltipWidth / 2) + margin;
+                              }
 
                               setHoveredBar({
                                 date: dateStr,
                                 views: data.views,
                                 downloads: data.downloads,
-                                x: chartInnerRect.left + (barIndex * barWidth) + (barWidth / 2),
-                                y: chartInnerRect.top - 10
+                                x: finalX,
+                                y: chartInnerRect.top - 15
                               });
+                            } else {
+                              setHoveredBar(null);
                             }
                           }}
                           onMouseLeave={() => setHoveredBar(null)}
@@ -489,7 +528,7 @@ const ImageModal = ({
                               );
                             })}
                           </div>
-                          {hoveredBar && (
+                          {hoveredBar && typeof document !== 'undefined' && createPortal(
                             <div
                               className="info-chart-tooltip"
                               style={{
@@ -504,7 +543,8 @@ const ImageModal = ({
                               ) : (
                                 <div>Đã tải {hoveredBar.downloads.toLocaleString()} lần</div>
                               )}
-                            </div>
+                            </div>,
+                            document.body
                           )}
                         </div>
 

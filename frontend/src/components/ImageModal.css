@@ -595,6 +595,8 @@
 .info-modal-content {
 	padding: 16px;
 	overflow-y: auto;
+	overflow-x: visible;
+	position: relative;
 }
 
 .info-published {
@@ -606,6 +608,7 @@
 .info-chart-container {
 	margin-bottom: 12px;
 	position: relative;
+	overflow: visible;
 }
 
 .info-chart {
