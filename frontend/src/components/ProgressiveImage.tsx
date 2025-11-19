@@ -14,14 +14,16 @@ interface ProgressiveImageProps {
 
 /**
  * Generate Cloudinary thumbnail URL on-the-fly for old images
+ * Uses f_auto to automatically serve WebP/AVIF when supported, with JPEG fallback
  */
 const generateThumbnailUrl = (imageUrl: string): string => {
   // If it's already a Cloudinary URL, add transformation
   if (imageUrl.includes('cloudinary.com')) {
     // Insert transformation before filename
+    // f_auto: automatically serves best format (AVIF > WebP > original)
     return imageUrl.replace(
       /\/upload\//,
-      '/upload/w_200,q_auto:low,f_auto/'
+      '/upload/w_200,q_auto:low,f_auto,dpr_auto/'
     );
   }
   return imageUrl;
@@ -30,12 +32,28 @@ const generateThumbnailUrl = (imageUrl: string): string => {
 /**
  * Generate Cloudinary small URL on-the-fly for old images
  * Use higher resolution (800px) to prevent pixelation when displayed at full width
+ * f_auto: automatically serves best format (AVIF > WebP > original)
  */
 const generateSmallUrl = (imageUrl: string): string => {
   if (imageUrl.includes('cloudinary.com')) {
     return imageUrl.replace(
       /\/upload\//,
-      '/upload/w_800,q_auto:good,f_auto/'
+      '/upload/w_800,q_auto:good,f_auto,dpr_auto/'
+    );
+  }
+  return imageUrl;
+};
+
+/**
+ * Generate Cloudinary regular URL with modern formats
+ * Reserved for future use (e.g., detail view)
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const generateRegularUrl = (imageUrl: string): string => {
+  if (imageUrl.includes('cloudinary.com')) {
+    return imageUrl.replace(
+      /\/upload\//,
+      '/upload/w_1200,q_auto:best,f_auto,dpr_auto/'
     );
   }
   return imageUrl;
@@ -57,7 +75,7 @@ const ProgressiveImage = ({
   onLoad,
   onError,
 }: ProgressiveImageProps) => {
-  // Suppress unused parameter warning
+  // Suppress unused parameter warning - reserved for future use
   void regularUrl;
   // Generate URLs on-the-fly if not provided (for old images)
   const effectiveThumbnail = thumbnailUrl || generateThumbnailUrl(src);
@@ -74,12 +92,16 @@ const ProgressiveImage = ({
 
   // Reset state when src changes
   useEffect(() => {
-    setCurrentSrc(effectiveThumbnail);
-    setIsLoaded(false);
-    setIsError(false);
-    setShouldLoadEagerly(false);
-    preloadedRef.current = false;
-    loadedSrcs.current.clear();
+    // Use a small timeout to avoid cascading renders
+    const timeoutId = setTimeout(() => {
+      setCurrentSrc(effectiveThumbnail);
+      setIsLoaded(false);
+      setIsError(false);
+      setShouldLoadEagerly(false);
+      preloadedRef.current = false;
+      loadedSrcs.current.clear();
+    }, 0);
+    return () => clearTimeout(timeoutId);
   }, [src, effectiveThumbnail]);
 
   // Preload images using Intersection Observer (like Unsplash)
@@ -93,7 +115,8 @@ const ProgressiveImage = ({
     if (isInViewport && !preloadedRef.current) {
       // Already visible, start loading immediately
       preloadedRef.current = true;
-      setShouldLoadEagerly(true);
+      // Use setTimeout to avoid cascading renders
+      setTimeout(() => setShouldLoadEagerly(true), 0);
 
       // Preload small size in background
       if (effectiveSmall !== effectiveThumbnail && !loadedSrcs.current.has(effectiveSmall)) {
@@ -161,6 +184,8 @@ const ProgressiveImage = ({
     return () => {
       observer.disconnect();
     };
+    // onLoad is stable and doesn't need to be in dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveThumbnail, effectiveSmall]);
 
   const handleLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -211,11 +236,29 @@ const ProgressiveImage = ({
     }
   };
 
+  // Generate srcset for responsive images with modern formats
+  // Cloudinary f_auto automatically serves best format, but we can be explicit
+  const generateSrcSet = (baseUrl: string, sizes: number[]): string => {
+    if (!baseUrl.includes('cloudinary.com')) {
+      return '';
+    }
+    return sizes
+      .map((size) => {
+        const url = baseUrl.replace(/\/upload\//, `/upload/w_${size},q_auto:good,f_auto,dpr_auto/`);
+        return `${url} ${size}w`;
+      })
+      .join(', ');
+  };
+
+  const srcSet = generateSrcSet(effectiveSmall, [400, 800, 1200, 1600]);
+
   return (
     <div ref={containerRef} className={`progressive-image-wrapper ${className}`}>
       <img
         ref={imgRef}
         src={currentSrc}
+        srcSet={srcSet || undefined}
+        sizes="(max-width: 400px) 400px, (max-width: 800px) 800px, (max-width: 1200px) 1200px, 1600px"
         alt={alt}
         className={`progressive-image ${isLoaded ? 'loaded' : 'loading'} ${isError ? 'error' : ''}`}
         onLoad={handleLoad}

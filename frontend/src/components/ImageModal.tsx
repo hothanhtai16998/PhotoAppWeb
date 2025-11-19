@@ -6,6 +6,10 @@ import {
   MoreVertical,
   CheckCircle2,
   ChevronDown,
+  Link as LinkIcon,
+  Facebook,
+  Twitter,
+  Mail,
 } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
@@ -42,10 +46,13 @@ const ImageModal = ({
   const [views, setViews] = useState<number>(image.views || 0);
   const [downloads, setDownloads] = useState<number>(image.downloads || 0);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const [activeTab, setActiveTab] = useState<'views' | 'downloads'>('views');
   const [hoveredBar, setHoveredBar] = useState<{ date: string; views: number; downloads: number; x: number; y: number } | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const infoButtonRef = useRef<HTMLButtonElement>(null);
+  const shareButtonRef = useRef<HTMLButtonElement>(null);
   const incrementedViewIds = useRef<Set<string>>(new Set());
   const currentImageIdRef = useRef<string | null>(null);
 
@@ -121,6 +128,84 @@ const ImageModal = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showInfoModal]);
+
+  // Close share menu when clicking outside
+  useEffect(() => {
+    if (!showShareMenu) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        shareButtonRef.current &&
+        !shareButtonRef.current.contains(target) &&
+        !target.closest('.share-menu')
+      ) {
+        setShowShareMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showShareMenu]);
+
+  // Generate share URL
+  const getShareUrl = () => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/image/${image._id}`;
+  };
+
+  // Copy link to clipboard
+  const handleCopyLink = async () => {
+    try {
+      const shareUrl = getShareUrl();
+      await navigator.clipboard.writeText(shareUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = getShareUrl();
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+      } catch (fallbackError) {
+        console.error('Fallback copy failed:', fallbackError);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
+  // Share to social media
+  const handleShare = (platform: 'facebook' | 'twitter' | 'email') => {
+    const shareUrl = getShareUrl();
+    const encodedUrl = encodeURIComponent(shareUrl);
+    const imageTitle = encodeURIComponent(image.imageTitle || 'Photo');
+
+    let shareWindowUrl = '';
+
+    switch (platform) {
+      case 'facebook':
+        shareWindowUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+        break;
+      case 'twitter':
+        shareWindowUrl = `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${imageTitle}`;
+        break;
+      case 'email':
+        shareWindowUrl = `mailto:?subject=${imageTitle}&body=${encodedUrl}`;
+        window.location.href = shareWindowUrl;
+        return;
+    }
+
+    if (shareWindowUrl) {
+      window.open(shareWindowUrl, '_blank', 'width=600,height=400');
+    }
+  };
 
   // Increment view count when modal opens (only once per image)
   useEffect(() => {
@@ -230,11 +315,68 @@ const ImageModal = ({
     };
   }, [hasMoreRelatedImages, isLoadingRelatedImages]);
 
-  // Close modal on Escape key and handle overlay scrolling
+  // Focus management: focus modal when it opens
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
+    const modalElement = document.querySelector('.image-modal') as HTMLElement;
+    if (modalElement) {
+      modalElement.focus();
+    }
+  }, [image._id]);
+
+  // Keyboard navigation: Escape to close, Arrow keys to navigate between images
+  useEffect(() => {
+    const handleKeyboard = (e: KeyboardEvent) => {
+      // Don't handle keyboard if user is typing in an input/textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      switch (e.key) {
+        case 'Escape':
+          onClose();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          navigateToAdjacentImage(-1); // Previous image
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          navigateToAdjacentImage(1); // Next image
+          break;
+        case 'Home':
+          e.preventDefault();
+          navigateToImage(0); // First image
+          break;
+        case 'End':
+          e.preventDefault();
+          navigateToImage(images.length - 1); // Last image
+          break;
+      }
+    };
+
+    // Find current image index and navigate to adjacent image
+    const navigateToAdjacentImage = (direction: number) => {
+      const currentIndex = images.findIndex(img => img._id === image._id);
+      if (currentIndex === -1) return;
+
+      const newIndex = currentIndex + direction;
+      if (newIndex >= 0 && newIndex < images.length) {
+        onImageSelect(images[newIndex]);
+        // Scroll to top of modal content
+        if (modalContentRef.current) {
+          modalContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+    };
+
+    // Navigate to specific image by index
+    const navigateToImage = (index: number) => {
+      if (index >= 0 && index < images.length) {
+        onImageSelect(images[index]);
+        if (modalContentRef.current) {
+          modalContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       }
     };
 
@@ -258,7 +400,7 @@ const ImageModal = ({
       modalContent.scrollTop += wheelEvent.deltaY;
     };
 
-    document.addEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', handleKeyboard);
     // Prevent page/body scrolling when modal is open
     document.body.style.overflow = 'hidden';
     // Prevent scrolling on the image grid container
@@ -271,7 +413,7 @@ const ImageModal = ({
     document.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('keydown', handleKeyboard);
       document.removeEventListener('wheel', handleWheel);
       document.body.style.overflow = '';
       const gridContainer = document.querySelector('.image-grid-container');
@@ -279,17 +421,23 @@ const ImageModal = ({
         (gridContainer as HTMLElement).style.overflow = '';
       }
     };
-  }, [onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onClose, image._id, images, onImageSelect]);
 
   return (
     <>
       <div
         className="image-modal-overlay"
         onClick={onClose}
+        aria-label="Close modal"
       />
       <div
         className="image-modal"
         onClick={(e) => e.stopPropagation()}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-image-title"
       >
         {/* Modal Header */}
         <div className="image-modal-header">
@@ -328,6 +476,7 @@ const ImageModal = ({
             </button> */}
             <button
               className="modal-download-btn"
+              aria-label={`Download ${image.imageTitle || 'image'}`}
               onClick={async (e) => {
                 e.stopPropagation();
                 // Increment download count
@@ -363,6 +512,7 @@ const ImageModal = ({
               src={image.imageUrl}
               alt={image.imageTitle || 'Photo'}
               className="modal-image"
+              id="modal-image-title"
             />
           </div>
 
@@ -370,14 +520,14 @@ const ImageModal = ({
           <div className="image-modal-footer">
             {/* Left: Stats */}
             <div className="modal-footer-left">
-              <div className="modal-footer-left-stats">
-                <div className="modal-stat">
+              <div className="modal-footer-left-stats" role="group" aria-label="Image statistics">
+                <div className="modal-stat" role="text">
                   <span className="stat-label">Lượt xem</span>
-                  <span className="stat-value">{views.toLocaleString()}</span>
+                  <span className="stat-value" aria-label={`${views.toLocaleString()} lượt xem`}>{views.toLocaleString()}</span>
                 </div>
-                <div className="modal-stat">
+                <div className="modal-stat" role="text">
                   <span className="stat-label">Lượt tải</span>
-                  <span className="stat-value">{downloads.toLocaleString()}</span>
+                  <span className="stat-value" aria-label={`${downloads.toLocaleString()} lượt tải`}>{downloads.toLocaleString()}</span>
                 </div>
               </div>
               {/* Image Info */}
@@ -406,31 +556,82 @@ const ImageModal = ({
 
             {/* Right: Actions */}
             <div className="modal-footer-right">
-              <button className="modal-footer-btn">
-                <Share2 size={18} />
-                <span>Chia sẻ</span>
-              </button>
+              <div style={{ position: 'relative' }}>
+                <button
+                  ref={shareButtonRef}
+                  className={`modal-footer-btn ${showShareMenu ? 'active' : ''}`}
+                  onClick={() => setShowShareMenu(!showShareMenu)}
+                  aria-label="Share image"
+                  aria-expanded={showShareMenu}
+                  aria-haspopup="true"
+                >
+                  <Share2 size={18} aria-hidden="true" />
+                  <span>Chia sẻ</span>
+                </button>
+                {/* Share Menu */}
+                {showShareMenu && (
+                  <div className="share-menu-wrapper">
+                    <div className="share-menu">
+                      <button
+                        className="share-menu-item"
+                        onClick={handleCopyLink}
+                        aria-label="Copy link"
+                      >
+                        <LinkIcon size={18} aria-hidden="true" />
+                        <span>{linkCopied ? 'Đã sao chép!' : 'Sao chép liên kết'}</span>
+                      </button>
+                      <button
+                        className="share-menu-item"
+                        onClick={() => handleShare('facebook')}
+                        aria-label="Share on Facebook"
+                      >
+                        <Facebook size={18} aria-hidden="true" />
+                        <span>Facebook</span>
+                      </button>
+                      <button
+                        className="share-menu-item"
+                        onClick={() => handleShare('twitter')}
+                        aria-label="Share on Twitter"
+                      >
+                        <Twitter size={18} aria-hidden="true" />
+                        <span>Twitter</span>
+                      </button>
+                      <button
+                        className="share-menu-item"
+                        onClick={() => handleShare('email')}
+                        aria-label="Share via email"
+                      >
+                        <Mail size={18} aria-hidden="true" />
+                        <span>Email</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div style={{ position: 'relative' }}>
                 <button
                   ref={infoButtonRef}
                   className={`modal-footer-btn ${showInfoModal ? 'active' : ''}`}
                   onClick={() => setShowInfoModal(!showInfoModal)}
+                  aria-label="Show image information"
+                  aria-expanded={showInfoModal}
+                  aria-haspopup="true"
                 >
-                  <Info size={18} />
+                  <Info size={18} aria-hidden="true" />
                   <span>Thông tin</span>
                 </button>
                 {/* Info Modal */}
                 {showInfoModal && (
                   <div className="info-modal-wrapper">
-                    <div className="info-modal">
+                    <div className="info-modal" role="dialog" aria-modal="true" aria-labelledby="info-modal-title">
                       <div className="info-modal-header">
-                        <h2 className="info-modal-title">Thông tin</h2>
+                        <h2 className="info-modal-title" id="info-modal-title">Thông tin</h2>
                         <button
                           className="info-modal-close"
                           onClick={() => setShowInfoModal(false)}
                           aria-label="Close info modal"
                         >
-                          ×
+                          <span aria-hidden="true">×</span>
                         </button>
                       </div>
                       <div className="info-modal-content">
@@ -447,6 +648,9 @@ const ImageModal = ({
                         <div
                           className="info-chart-container"
                           ref={chartContainerRef}
+                          id="info-chart-container"
+                          role="img"
+                          aria-label={`Chart showing ${activeTab === 'views' ? 'views' : 'downloads'} over the last 14 days`}
                           onMouseMove={(e) => {
                             if (!chartContainerRef.current) return;
 
@@ -552,16 +756,22 @@ const ImageModal = ({
                         </div>
 
                         {/* Tabs */}
-                        <div className="info-tabs">
+                        <div className="info-tabs" role="tablist" aria-label="Statistics view">
                           <button
                             className={`info-tab ${activeTab === 'views' ? 'active' : ''}`}
                             onClick={() => setActiveTab('views')}
+                            role="tab"
+                            aria-selected={activeTab === 'views'}
+                            aria-controls="info-chart-container"
                           >
                             Lượt xem
                           </button>
                           <button
                             className={`info-tab ${activeTab === 'downloads' ? 'active' : ''}`}
                             onClick={() => setActiveTab('downloads')}
+                            role="tab"
+                            aria-selected={activeTab === 'downloads'}
+                            aria-controls="info-chart-container"
                           >
                             Lượt tải
                           </button>
@@ -571,8 +781,8 @@ const ImageModal = ({
                   </div>
                 )}
               </div>
-              <button className="modal-footer-btn">
-                <MoreVertical size={18} />
+              <button className="modal-footer-btn" aria-label="More options">
+                <MoreVertical size={18} aria-hidden="true" />
               </button>
             </div>
           </div>

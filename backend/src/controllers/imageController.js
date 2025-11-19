@@ -182,18 +182,20 @@ export const uploadImage = asyncHandler(async (req, res) => {
                         folder: 'photo-app-images',
                         resource_type: 'image',
                         // Generate multiple sizes for progressive loading (like Unsplash)
+                        // fetch_format: 'auto' automatically serves WebP/AVIF when supported
                         eager: [
                             // Thumbnail: 200px width, low quality for blur-up effect
-                            { width: 200, quality: 'auto:low', fetch_format: 'auto', crop: 'limit' },
+                            { width: 200, quality: 'auto:low', fetch_format: 'auto', dpr: 'auto', crop: 'limit' },
                             // Small: 800px width for grid view (increased from 400px to prevent pixelation)
-                            { width: 800, quality: 'auto:good', fetch_format: 'auto', crop: 'limit' },
+                            { width: 800, quality: 'auto:good', fetch_format: 'auto', dpr: 'auto', crop: 'limit' },
                             // Regular: 1080px width for detail view
-                            { width: 1080, quality: 'auto:good', fetch_format: 'auto', crop: 'limit' },
+                            { width: 1080, quality: 'auto:good', fetch_format: 'auto', dpr: 'auto', crop: 'limit' },
                         ],
                         // Main image transformation
                         transformation: [
                             { quality: 'auto:good' },
                             { fetch_format: 'auto' },
+                            { dpr: 'auto' },
                         ],
                         // Add timeout to Cloudinary upload options
                         timeout: CLOUDINARY_UPLOAD_TIMEOUT,

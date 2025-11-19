@@ -5,6 +5,7 @@ import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
 import CategoryNavigation from './CategoryNavigation';
 import ImageModal from './ImageModal';
+import { ImageGridSkeleton } from './SkeletonLoader';
 import { toast } from 'sonner';
 import './ImageGrid.css';
 
@@ -112,6 +113,22 @@ const ImageGrid = () => {
 
   // Get current image IDs for comparison
   const currentImageIds = useMemo(() => new Set(images.map(img => img._id)), [images]);
+
+  // Preload next images in the grid for smoother scrolling
+  useEffect(() => {
+    if (images.length === 0) return;
+
+    // Preload the next 6 images (approximately 2 rows ahead)
+    const imagesToPreload = images.slice(0, 6);
+
+    imagesToPreload.forEach((image) => {
+      // Preload small size for grid view
+      if (image.smallUrl || image.imageUrl) {
+        const preloadImg = new Image();
+        preloadImg.src = image.smallUrl || image.imageUrl;
+      }
+    });
+  }, [images]);
 
   // Determine image type when it loads - memoized to prevent recreation
   const handleImageLoad = useCallback((imageId: string, img: HTMLImageElement) => {
@@ -230,9 +247,8 @@ const ImageGrid = () => {
   if (loading && images.length === 0) {
     return (
       <div className="image-grid-container">
-        <div className="loading-state">
-          <p>Đang tải ảnh...</p>
-        </div>
+        <CategoryNavigation />
+        <ImageGridSkeleton count={12} />
       </div>
     );
   }
@@ -259,8 +275,8 @@ const ImageGrid = () => {
           <p>Chưa có ảnh nào, hãy thêm ảnh.</p>
         </div>
       ) : (
-        <div className="masonry-grid">
-          {images.map((image) => {
+        <div className="masonry-grid" role="grid" aria-label="Image gallery">
+          {images.map((image, index) => {
             const imageType = imageTypes.get(image._id) || 'landscape'; // Get from state
             // Debug: Check if uploadedBy exists
             const hasUserInfo = image.uploadedBy && (image.uploadedBy.displayName || image.uploadedBy.username);
@@ -268,6 +284,7 @@ const ImageGrid = () => {
               <div
                 key={image._id}
                 className={`masonry-item ${imageType}`}
+                role="gridcell"
               >
                 <div
                   className="masonry-link"
@@ -281,9 +298,32 @@ const ImageGrid = () => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
                       setSelectedImage(image);
+                    } else if (e.key === 'ArrowRight') {
+                      e.preventDefault();
+                      const nextIndex = Math.min(index + 1, images.length - 1);
+                      const nextElement = document.querySelector(`[data-image-index="${nextIndex}"]`) as HTMLElement;
+                      nextElement?.focus();
+                    } else if (e.key === 'ArrowLeft') {
+                      e.preventDefault();
+                      const prevIndex = Math.max(index - 1, 0);
+                      const prevElement = document.querySelector(`[data-image-index="${prevIndex}"]`) as HTMLElement;
+                      prevElement?.focus();
+                    } else if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      // Move to next row (approximately 3 images per row)
+                      const nextIndex = Math.min(index + 3, images.length - 1);
+                      const nextElement = document.querySelector(`[data-image-index="${nextIndex}"]`) as HTMLElement;
+                      nextElement?.focus();
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      // Move to previous row
+                      const prevIndex = Math.max(index - 3, 0);
+                      const prevElement = document.querySelector(`[data-image-index="${prevIndex}"]`) as HTMLElement;
+                      prevElement?.focus();
                     }
                   }}
-                  aria-label={`View ${image.imageTitle || 'image'}`}
+                  aria-label={`View ${image.imageTitle || 'image'} ${index + 1} of ${images.length}`}
+                  data-image-index={index}
                 >
                   <ProgressiveImage
                     src={image.imageUrl}

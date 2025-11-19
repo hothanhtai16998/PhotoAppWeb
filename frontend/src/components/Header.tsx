@@ -15,7 +15,47 @@ export const Header = memo(function Header() {
   const location = useLocation()
   const [searchQuery, setSearchQuery] = useState('')
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [recentSearches, setRecentSearches] = useState<string[]>([])
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Load recent searches from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('recentSearches')
+    if (saved) {
+      try {
+        setRecentSearches(JSON.parse(saved))
+      } catch {
+        // Ignore parse errors
+      }
+    }
+  }, [])
+
+  // Save recent searches to localStorage
+  const saveRecentSearch = (query: string) => {
+    if (!query.trim()) return
+    const updated = [query, ...recentSearches.filter(s => s !== query)].slice(0, 5)
+    setRecentSearches(updated)
+    localStorage.setItem('recentSearches', JSON.stringify(updated))
+  }
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(e.target as Node) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(e.target as Node)
+      ) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Debounced search effect
   useEffect(() => {
@@ -88,14 +128,31 @@ export const Header = memo(function Header() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, location.pathname, currentCategory])
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: React.FormEvent, query?: string) => {
     e.preventDefault()
+    const finalQuery = query || searchQuery
+    if (finalQuery.trim()) {
+      saveRecentSearch(finalQuery.trim())
+    }
+    setShowSuggestions(false)
     if (location.pathname !== '/') {
       navigate('/')
     }
     fetchImages({
-      search: searchQuery || undefined,
+      search: finalQuery || undefined,
     })
+  }
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setSearchQuery(suggestion)
+    setShowSuggestions(false)
+    if (location.pathname !== '/') {
+      navigate('/')
+    }
+    fetchImages({
+      search: suggestion || undefined,
+    })
+    saveRecentSearch(suggestion)
   }
 
   const handleLogoClick = () => {
@@ -123,33 +180,82 @@ export const Header = memo(function Header() {
           </Link>
 
           {/* Search Bar */}
-          <form onSubmit={handleSearchSubmit} className="header-search">
-            <div className="search-icon-left">
-              <Search size={20} />
-            </div>
-            <input
-              type="text"
-              placeholder="Tìm ảnh hoặc bản vẻ illustration"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="search-clear"
-              >
-                <X size={16} />
+          <div style={{ position: 'relative', flex: 1, maxWidth: '600px' }}>
+            <form onSubmit={handleSearchSubmit} className="header-search">
+              <div className="search-icon-left">
+                <Search size={20} />
+              </div>
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Tìm ảnh hoặc bản vẻ illustration"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setShowSuggestions(true)
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                className="search-input"
+                aria-autocomplete="list"
+                aria-expanded={showSuggestions}
+                aria-label="Search for images"
+                aria-controls="search-suggestions"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('')
+                    setShowSuggestions(false)
+                  }}
+                  className="search-clear"
+                >
+                  <X size={16} />
+                </button>
+              )}
+              <button type="button" className="search-visual" title="Visual search">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="2" y="2" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2" fill="none" />
+                  <circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                </svg>
               </button>
+            </form>
+            {/* Search Suggestions */}
+            {showSuggestions && (searchQuery || recentSearches.length > 0) && (
+              <div ref={suggestionsRef} className="search-suggestions" id="search-suggestions" role="listbox" aria-label="Search suggestions">
+                {recentSearches.length > 0 && !searchQuery && (
+                  <div className="suggestions-section">
+                    <div className="suggestions-header">Tìm kiếm gần đây</div>
+                    {recentSearches.map((search, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className="suggestion-item"
+                        onClick={() => handleSuggestionClick(search)}
+                        role="option"
+                        aria-label={`Search for ${search}`}
+                      >
+                        <Search size={16} aria-hidden="true" />
+                        <span>{search}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className="suggestion-item suggestion-item-primary"
+                    onClick={(e) => handleSearchSubmit(e, searchQuery)}
+                    role="option"
+                    aria-label={`Search for ${searchQuery}`}
+                  >
+                    <Search size={16} aria-hidden="true" />
+                    <span>Tìm kiếm "{searchQuery}"</span>
+                  </button>
+                )}
+              </div>
             )}
-            <button type="button" className="search-visual" title="Visual search">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="2" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2" fill="none" />
-                <circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.5" fill="none" />
-              </svg>
-            </button>
-          </form>
+          </div>
 
           {/* Right Actions */}
           <div className="header-actions">

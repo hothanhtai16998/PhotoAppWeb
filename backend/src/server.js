@@ -11,6 +11,7 @@ import compression from 'compression';
 import imageRoute from './routes/imageRoute.js';
 import adminRoute from './routes/adminRoute.js';
 import categoryRoute from './routes/categoryRoute.js';
+import collectionRoute from './routes/collectionRoute.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { apiLimiter } from './middlewares/rateLimiter.js';
 import { logger } from './utils/logger.js';
@@ -59,12 +60,18 @@ app.use('/api/users', userRoute);
 app.use('/api/images', imageRoute);
 app.use('/api/admin', adminRoute);
 app.use('/api/categories', categoryRoute);
+app.use('/api/collections', collectionRoute);
 
 // Serve static files in production
 if (env.NODE_ENV === 'production') {
     // __dirname is backend/src, so go up two levels to root, then into frontend/dist
     const frontendDistPath = path.join(__dirname, '../../frontend/dist');
-    app.use(express.static(frontendDistPath));
+    // Set cache headers for static assets
+    app.use(express.static(frontendDistPath, {
+        maxAge: '1y', // Cache static assets for 1 year
+        etag: true,
+        lastModified: true,
+    }));
 
     app.get('*', (req, res) => {
         // Don't serve index.html for API routes

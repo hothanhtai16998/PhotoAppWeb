@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/stores/useAuthStore';
+import * as Sentry from '@sentry/react';
 import axios, {
 	type AxiosError,
 	type InternalAxiosRequestConfig,
@@ -118,6 +119,21 @@ api.interceptors.response.use(
 					refreshError
 				);
 			}
+		}
+
+		// Log API errors to Sentry (except 401/403 which are handled above)
+		if (error.response && error.response.status >= 500) {
+			Sentry.captureException(error, {
+				tags: {
+					errorType: 'api_error',
+					statusCode: error.response.status,
+				},
+				extra: {
+					url: originalRequest.url,
+					method: originalRequest.method,
+					status: error.response.status,
+				},
+			});
 		}
 
 		return Promise.reject(error);
