@@ -132,14 +132,16 @@ const ImageGrid = () => {
       let downloadUrl: string;
 
       if (image.publicId && image.imageUrl?.includes('cloudinary.com')) {
-        // Extract cloud_name and construct original URL
+        // Extract cloud_name from URL and construct original URL
         // Cloudinary URL pattern: https://res.cloudinary.com/{cloud_name}/image/upload/{transformations}/{public_id}.{format}
         // For original (no transformations): https://res.cloudinary.com/{cloud_name}/image/upload/{public_id}.{format}
 
-        const cloudinaryMatch = image.imageUrl.match(/res\.cloudinary\.com\/([^\/]+)\/image\/upload/);
-        if (cloudinaryMatch && cloudinaryMatch[1]) {
-          const cloudName = cloudinaryMatch[1];
+        // Extract cloud name from URL (simpler approach)
+        const urlParts = image.imageUrl.split('/');
+        const cloudNameIndex = urlParts.findIndex(part => part === 'cloudinary.com') + 1;
+        const cloudName = cloudNameIndex > 0 && urlParts[cloudNameIndex] ? urlParts[cloudNameIndex] : null;
 
+        if (cloudName) {
           // Extract format from the original URL (it's usually at the end before query params)
           const formatMatch = image.imageUrl.match(/\.([a-z]+)(?:\?|$)/i);
           const format = formatMatch ? formatMatch[1] : 'jpg';
@@ -149,19 +151,19 @@ const ImageGrid = () => {
           downloadUrl = `https://res.cloudinary.com/${cloudName}/image/upload/${image.publicId}.${format}`;
         } else {
           // Fallback: try to remove transformations from existing URL
-          downloadUrl = image.imageUrl.replace(/\/upload\/[^\/]+\//, '/upload/');
+          downloadUrl = image.imageUrl.replace(/\/upload\/[^/]+\//, '/upload/');
         }
       } else if (image.imageUrl?.includes('cloudinary.com')) {
         // No publicId, but it's a Cloudinary URL - try to get original by removing transformations
         // Pattern: .../upload/{transformations}/{public_id} -> .../upload/{public_id}
-        downloadUrl = image.imageUrl.replace(/\/upload\/[^\/]+\//, '/upload/');
+        downloadUrl = image.imageUrl.replace(/\/upload\/[^/]+\//, '/upload/');
       } else {
         // Not a Cloudinary URL or no publicId - use the highest quality URL available
         downloadUrl = image.imageUrl || image.regularUrl || image.smallUrl || '';
       }
 
       if (!downloadUrl) {
-        throw new Error('No image URL available');
+        throw new Error('Lỗi khi lấy Url của ảnh');
       }
 
       // Fetch the image as a blob to handle CORS
@@ -171,7 +173,7 @@ const ImageGrid = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch image');
+        throw new Error('Lỗi khi lấy ảnh');
       }
 
       const blob = await response.blob();
@@ -196,16 +198,16 @@ const ImageGrid = () => {
         URL.revokeObjectURL(blobUrl);
       }, 100);
 
-      toast.success('Image downloaded successfully');
+      toast.success('Tải ảnh thành công');
     } catch (error) {
-      console.error('Download error:', error);
-      toast.error('Failed to download image. Please try again.');
+      console.error('Tải ảnh thất bại:', error);
+      toast.error('Tải ảnh thất bại. Vui lòng thử lại.');
 
       // Fallback: try opening in new tab if download fails
       try {
         window.open(image.imageUrl, '_blank');
       } catch (fallbackError) {
-        console.error('Fallback download error:', fallbackError);
+        console.error('Lỗi fallback khi tải ảnh:', fallbackError);
       }
     }
   }, []);
@@ -214,7 +216,7 @@ const ImageGrid = () => {
     return (
       <div className="image-grid-container">
         <div className="loading-state">
-          <p>Loading images...</p>
+          <p>Đang tải ảnh...</p>
         </div>
       </div>
     );
@@ -224,8 +226,8 @@ const ImageGrid = () => {
     return (
       <div className="image-grid-container">
         <div className="error-state">
-          <p>Error: {error}</p>
-          <button onClick={() => fetchImages()}>Try Again</button>
+          <p>Lỗi: {error}</p>
+          <button onClick={() => fetchImages()}>Vui lòng thử lại</button>
         </div>
       </div>
     );
@@ -235,11 +237,11 @@ const ImageGrid = () => {
     <div className="image-grid-container">
       {/* Category Navigation */}
       <CategoryNavigation />
-      
+
       {/* Main Image Grid */}
       {images.length === 0 ? (
         <div className="empty-state">
-          <p>No images found. Be the first to upload one!</p>
+          <p>Chưa có ảnh nào, hãy thêm ảnh.</p>
         </div>
       ) : (
         <div className="masonry-grid">
@@ -252,7 +254,7 @@ const ImageGrid = () => {
                 key={image._id}
                 className={`masonry-item ${imageType}`}
               >
-                <div 
+                <div
                   className="masonry-link"
                   onClick={() => {
                     // Open image in new tab as fallback
@@ -367,14 +369,14 @@ const ImageGrid = () => {
       {loading && images.length > 0 && (
         <div className="loading-more">
           <div className="loading-spinner" />
-          <p>Loading more images...</p>
+          <p>Đang tải thêm ảnh...</p>
         </div>
       )}
 
       {/* End of results */}
       {pagination && pagination.page >= pagination.pages && images.length > 0 && (
         <div className="end-of-results">
-          <p>You've reached the end</p>
+          <p>Tất cả ảnh đã được hiển thị</p>
         </div>
       )}
     </div>

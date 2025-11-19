@@ -345,7 +345,7 @@ function Slider() {
                                         onClick={goToNext}
                                         aria-label="Next slide"
                                     >
-                                        Tiép theo
+                                        Tiếp theo
                                     </button>
                                 </div>
                             </div>
@@ -354,6 +354,14 @@ function Slider() {
                             {(slide.location || slide.cameraModel || slide.createdAt) && (
                                 <div className={`slide-content-right ${isActive && !isTransitioning && animatingSlide === index ? 'active' : ''}`}>
                                     <div className="image-info-box">
+                                        {slide.uploadedBy && (
+                                            <div className="info-item">
+                                                <span className="info-label">Người đăng:</span>
+                                                <span className="info-value">
+                                                    {slide.uploadedBy.displayName || slide.uploadedBy.username || 'Unknown'}
+                                                </span>
+                                            </div>
+                                        )}
                                         {slide.location && (
                                             <div className="info-item">
                                                 <span className="info-label">Địa điểm:</span>
@@ -371,10 +379,10 @@ function Slider() {
                                             <div className="info-item">
                                                 <span className="info-label">Ngày:</span>
                                                 <span className="info-value">
-                                                    {new Date(slide.createdAt).toLocaleDateString('en-US', {
-                                                        year: 'numeric',
+                                                    {new Date(slide.createdAt).toLocaleDateString('vi-VN', {
+                                                        day: 'numeric',
                                                         month: 'long',
-                                                        day: 'numeric'
+                                                        year: 'numeric'
                                                     })}
                                                 </span>
                                             </div>

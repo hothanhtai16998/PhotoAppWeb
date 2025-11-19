@@ -51,16 +51,18 @@ const ProgressiveImage = ({
   src,
   thumbnailUrl,
   smallUrl,
-  regularUrl: _regularUrl, // Reserved for future use (e.g., detail view)
+  regularUrl, // Reserved for future use (e.g., detail view)
   alt,
   className = '',
   onLoad,
   onError,
 }: ProgressiveImageProps) => {
+  // Suppress unused parameter warning
+  void regularUrl;
   // Generate URLs on-the-fly if not provided (for old images)
   const effectiveThumbnail = thumbnailUrl || generateThumbnailUrl(src);
   const effectiveSmall = smallUrl || generateSmallUrl(src);
-  
+
   const [currentSrc, setCurrentSrc] = useState<string>(effectiveThumbnail);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isError, setIsError] = useState(false);
@@ -69,6 +71,16 @@ const ProgressiveImage = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const loadedSrcs = useRef<Set<string>>(new Set());
   const preloadedRef = useRef<boolean>(false);
+
+  // Reset state when src changes
+  useEffect(() => {
+    setCurrentSrc(effectiveThumbnail);
+    setIsLoaded(false);
+    setIsError(false);
+    setShouldLoadEagerly(false);
+    preloadedRef.current = false;
+    loadedSrcs.current.clear();
+  }, [src, effectiveThumbnail]);
 
   // Preload images using Intersection Observer (like Unsplash)
   useEffect(() => {
@@ -82,13 +94,24 @@ const ProgressiveImage = ({
       // Already visible, start loading immediately
       preloadedRef.current = true;
       setShouldLoadEagerly(true);
-      
+
       // Preload small size in background
       if (effectiveSmall !== effectiveThumbnail && !loadedSrcs.current.has(effectiveSmall)) {
         const smallImg = new Image();
         smallImg.onload = () => {
+          loadedSrcs.current.add(effectiveSmall);
           setCurrentSrc(effectiveSmall);
           setIsLoaded(true);
+          if (onLoad && imgRef.current) {
+            onLoad(imgRef.current);
+          }
+        };
+        smallImg.onerror = () => {
+          // If small size fails, keep thumbnail
+          setIsLoaded(true);
+          if (onLoad && imgRef.current) {
+            onLoad(imgRef.current);
+          }
         };
         smallImg.src = effectiveSmall;
       }
@@ -102,17 +125,28 @@ const ProgressiveImage = ({
             // Image is about to be visible, preload it
             preloadedRef.current = true;
             setShouldLoadEagerly(true);
-            
+
             // Preload small size in background
             if (effectiveSmall !== effectiveThumbnail && !loadedSrcs.current.has(effectiveSmall)) {
               const smallImg = new Image();
               smallImg.onload = () => {
+                loadedSrcs.current.add(effectiveSmall);
                 setCurrentSrc(effectiveSmall);
                 setIsLoaded(true);
+                if (onLoad && imgRef.current) {
+                  onLoad(imgRef.current);
+                }
+              };
+              smallImg.onerror = () => {
+                // If small size fails, keep thumbnail
+                setIsLoaded(true);
+                if (onLoad && imgRef.current) {
+                  onLoad(imgRef.current);
+                }
               };
               smallImg.src = effectiveSmall;
             }
-            
+
             observer.disconnect();
           }
         });
@@ -142,14 +176,19 @@ const ProgressiveImage = ({
         // Load the small size in the background
         const nextImg = new Image();
         nextImg.onload = () => {
+          loadedSrcs.current.add(effectiveSmall);
           setCurrentSrc(effectiveSmall);
           setIsLoaded(true);
-          if (onLoad) onLoad(img);
+          if (onLoad && imgRef.current) {
+            onLoad(imgRef.current);
+          }
         };
         nextImg.onerror = () => {
           // If next size fails, keep current
           setIsLoaded(true);
-          if (onLoad) onLoad(img);
+          if (onLoad && imgRef.current) {
+            onLoad(imgRef.current);
+          }
         };
         nextImg.src = effectiveSmall;
         return;

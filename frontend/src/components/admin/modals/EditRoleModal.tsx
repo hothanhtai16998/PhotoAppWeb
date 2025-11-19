@@ -30,7 +30,9 @@ export function EditRoleModal({ role, onClose, onSave }: EditRoleModalProps) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        await onSave(role.userId._id || role.userId, { role: selectedRole, permissions });
+        // Extract userId - it can be either a string or a User object
+        const userId = typeof role.userId === 'string' ? role.userId : role.userId._id;
+        await onSave(userId, { role: selectedRole, permissions });
     };
 
     return (
@@ -44,7 +46,11 @@ export function EditRoleModal({ role, onClose, onSave }: EditRoleModalProps) {
                     <div className="admin-form-group">
                         <label>Tài khoản admin</label>
                         <Input
-                            value={role.userId?.displayName || role.userId?.username || ''}
+                            value={
+                                typeof role.userId === 'string'
+                                    ? ''
+                                    : (role.userId?.displayName || role.userId?.username || '')
+                            }
                             disabled
                         />
                     </div>
@@ -70,17 +76,20 @@ export function EditRoleModal({ role, onClose, onSave }: EditRoleModalProps) {
                     <div className="admin-form-group">
                         <label>Quyền hạn</label>
                         <div className="admin-permissions-checkboxes">
-                            {Object.entries(allPermissions).map(([key]) => (
-                                <label key={key} className="admin-checkbox-label">
-                                    <input
-                                        type="checkbox"
-                                        checked={permissions[key] || false}
-                                        onChange={(e) => setPermissions({ ...permissions, [key]: e.target.checked })}
-                                        disabled={key === 'viewDashboard'}
-                                    />
-                                    <span>{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                </label>
-                            ))}
+                            {Object.entries(allPermissions).map(([key]) => {
+                                const permissionKey = key as keyof AdminRolePermissions;
+                                return (
+                                    <label key={key} className="admin-checkbox-label">
+                                        <input
+                                            type="checkbox"
+                                            checked={permissions[permissionKey] || false}
+                                            onChange={(e) => setPermissions({ ...permissions, [permissionKey]: e.target.checked })}
+                                            disabled={key === 'viewDashboard'}
+                                        />
+                                        <span>{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                    </label>
+                                );
+                            })}
                         </div>
                     </div>
 

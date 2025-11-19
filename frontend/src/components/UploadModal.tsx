@@ -1,6 +1,4 @@
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+// Removed react-hook-form - using manual state management for per-image forms
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,19 +10,23 @@ import { useNavigate } from 'react-router-dom';
 import { X, Upload, ArrowRight } from 'lucide-react';
 import './UploadModal.css';
 
-const uploadSchema = z.object({
-    image: z.instanceof(FileList).refine(files => files?.length === 1, 'Image is required.'),
-    imageTitle: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
-    imageCategory: z.string().min(1, 'Category is required'),
-    location: z.string().optional(),
-    cameraModel: z.string().optional(),
-});
-
-type UploadFormValues = z.infer<typeof uploadSchema>;
+// Schema removed - using manual validation
 
 interface UploadModalProps {
     isOpen: boolean;
     onClose: () => void;
+}
+
+interface ImageData {
+    file: File;
+    title: string;
+    category: string;
+    location: string;
+    cameraModel: string;
+    errors: {
+        title?: string;
+        category?: string;
+    };
 }
 
 function UploadModal({ isOpen, onClose }: UploadModalProps) {
@@ -32,29 +34,16 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     const { accessToken } = useAuthStore();
     const navigate = useNavigate();
     const [dragActive, setDragActive] = useState(false);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [imagesData, setImagesData] = useState<ImageData[]>([]);
     const [showProgress, setShowProgress] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
-    const [showTooltip, setShowTooltip] = useState(false);
+    const [uploadingIndex, setUploadingIndex] = useState(0);
+    const [totalUploads, setTotalUploads] = useState(0);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loadingCategories, setLoadingCategories] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const submitButtonRef = useRef<HTMLButtonElement>(null);
-    const { register, handleSubmit, formState: { errors }, setValue, watch, reset, getValues } = useForm<UploadFormValues>({
-        resolver: zodResolver(uploadSchema),
-        mode: 'onSubmit',
-        defaultValues: {
-            imageTitle: '',
-            imageCategory: '',
-            location: '',
-            cameraModel: '',
-        },
-    });
 
-    const imageFile = watch('image');
-    const imageTitle = watch('imageTitle');
-    const imageCategory = watch('imageCategory');
-    const imageRegister = register('image');
 
     // Fetch categories when modal opens
     useEffect(() => {
@@ -74,17 +63,38 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         }
     }, [isOpen]);
 
-    // Check if all required fields are filled
-    const isFormValid = selectedFile !== null &&
-        imageTitle && imageTitle.trim().length > 0 &&
-        imageCategory && imageCategory.trim().length > 0;
+    // Check if all images have required fields filled
+    const isFormValid = imagesData.length > 0 &&
+        imagesData.every(img =>
+            img.title.trim().length > 0 &&
+            img.category.trim().length > 0
+        );
 
-    // Handle file selection
+    // Initialize imagesData when files are selected
     useEffect(() => {
-        if (imageFile && imageFile.length > 0) {
-            setSelectedFile(imageFile[0]);
+        if (selectedFiles.length > 0) {
+            setImagesData(prev => {
+                // Initialize or update imagesData array
+                const newImagesData: ImageData[] = selectedFiles.map((file, index) => {
+                    // If image data already exists for this file at this index, keep it; otherwise create new
+                    if (prev[index] && prev[index].file === file) {
+                        return prev[index];
+                    }
+                    return {
+                        file,
+                        title: '',
+                        category: '',
+                        location: '',
+                        cameraModel: '',
+                        errors: {}
+                    };
+                });
+                return newImagesData;
+            });
+        } else {
+            setImagesData([]);
         }
-    }, [imageFile]);
+    }, [selectedFiles]);
 
     const handleDrag = (e: React.DragEvent) => {
         e.preventDefault();
@@ -101,68 +111,99 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         e.stopPropagation();
         setDragActive(false);
 
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            const file = e.dataTransfer.files[0];
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
-            setValue('image', dataTransfer.files);
-            setSelectedFile(file);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const files = Array.from(e.dataTransfer.files);
+            setSelectedFiles(files);
         }
     };
 
     const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            setSelectedFile(file);
-            // Update form value
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
-            setValue('image', dataTransfer.files, { shouldValidate: true });
+        if (e.target.files && e.target.files.length > 0) {
+            const files = Array.from(e.target.files);
+            setSelectedFiles(files);
         }
     };
 
-    const onSubmit = async (data: UploadFormValues) => {
-        console.log('Form submitted with data:', data); // Debug log
-        // Trim string values before submitting
-        const trimmedData = {
-            ...data,
-            imageTitle: data.imageTitle.trim(),
-            imageCategory: data.imageCategory.trim(),
-            location: data.location?.trim() || '',
-            cameraModel: data.cameraModel?.trim() || '',
-        };
+    // Update image data when form fields change
+    const updateImageData = (index: number, field: 'title' | 'category' | 'location' | 'cameraModel', value: string) => {
+        setImagesData(prev => {
+            const updated = [...prev];
+            const newErrors = { ...updated[index].errors };
+            if (field === 'title') {
+                newErrors.title = undefined;
+            } else if (field === 'category') {
+                newErrors.category = undefined;
+            }
+            updated[index] = {
+                ...updated[index],
+                [field]: value,
+                errors: newErrors
+            };
+            return updated;
+        });
+    };
 
-        const { image, ...rest } = trimmedData;
+    // Validate all images before submit
+    const validateAllImages = (): boolean => {
+        const updated = imagesData.map(img => {
+            const errors: { title?: string; category?: string } = {};
+            if (!img.title.trim()) {
+                errors.title = 'Title is required';
+            }
+            if (!img.category.trim()) {
+                errors.category = 'Category is required';
+            }
+            return { ...img, errors };
+        });
+        setImagesData(updated);
+        return updated.every(img => Object.keys(img.errors).length === 0);
+    };
 
-        // Show progress screen - progress will start at 0 from the store
+    const handleSubmitAll = async () => {
+        // Validate all images
+        if (!validateAllImages()) {
+            return;
+        }
+
+        // Show progress screen
         setShowProgress(true);
+        setTotalUploads(imagesData.length);
+        setUploadingIndex(0);
 
         try {
-            // Upload will update progress from 0 to 100% in real-time via the progress callback
-            // The progress tracks the actual file upload to Cloudinary
-            // Note: uploadImage doesn't return the response, it updates the store
-            // We'll get the category from the form data instead
-            await uploadImage({ image: image[0], ...rest });
+            // Upload all images sequentially with their own metadata
+            for (let i = 0; i < imagesData.length; i++) {
+                setUploadingIndex(i);
+                const imgData = imagesData[i];
 
-            // Wait a moment to show 100% and "Published 1 of 1" before transitioning to success
-            // This ensures the user sees the completion state
+                await uploadImage({
+                    image: imgData.file,
+                    imageTitle: imgData.title.trim(),
+                    imageCategory: imgData.category.trim(),
+                    location: imgData.location.trim() || undefined,
+                    cameraModel: imgData.cameraModel.trim() || undefined,
+                });
+
+                // Small delay between uploads
+                if (i < imagesData.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+
+            // Wait a moment before showing success
             await new Promise(resolve => setTimeout(resolve, 800));
 
             setShowProgress(false);
             setShowSuccess(true);
 
-            // Dispatch refresh event immediately after successful upload
-            // This will trigger ProfilePage and Header to refresh
+            // Dispatch refresh events
             window.dispatchEvent(new CustomEvent('refreshProfile'));
 
-            // Get the category name from the selected category in the form
-            // Find the category name from the categories list using the selected ID
-            const selectedCategoryId = data.imageCategory.trim();
-            const selectedCategory = categories.find(cat => cat._id === selectedCategoryId);
-            const categoryName = selectedCategory?.name || null;
+            // Get category names (use first image's category for refresh)
+            const firstCategoryId = imagesData[0]?.category;
+            const firstCategory = categories.find(cat => cat._id === firstCategoryId);
+            const categoryName = firstCategory?.name || null;
 
-            // Dispatch refresh event for Header to handle (with a small delay to ensure backend processed)
-            // Pass the category name so Header can refresh with the correct filter
             setTimeout(() => {
                 const refreshEvent = new CustomEvent('refreshImages', {
                     detail: { categoryName }
@@ -175,16 +216,14 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         }
     };
 
-    const onError = (errors: Record<string, { message?: string }>) => {
-        console.log('Form validation errors:', errors); // Debug log
-        console.log('Current form values:', getValues()); // Debug log
-    };
 
     const handleViewProfile = () => {
-        reset();
-        setSelectedFile(null);
+        setSelectedFiles([]);
+        setImagesData([]);
         setShowSuccess(false);
         setShowProgress(false);
+        setUploadingIndex(0);
+        setTotalUploads(0);
         onClose();
         // Dispatch custom event to trigger image refresh
         window.dispatchEvent(new CustomEvent('refreshProfile'));
@@ -193,12 +232,14 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
     const handleCancel = useCallback(() => {
         if (showProgress || showSuccess) return; // Prevent closing during upload/success
-        reset();
-        setSelectedFile(null);
+        setSelectedFiles([]);
+        setImagesData([]);
         setShowProgress(false);
         setShowSuccess(false);
+        setUploadingIndex(0);
+        setTotalUploads(0);
         onClose();
-    }, [reset, onClose, showProgress, showSuccess]);
+    }, [onClose, showProgress, showSuccess]);
 
     // Handle ESC key
     useEffect(() => {
@@ -261,11 +302,15 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
     // Progress Screen
     if (showProgress) {
-        // Ensure progress is at least 0 and at most 100
-        // Progress tracks the actual upload to Cloudinary (0% to 100%)
-        const displayProgress = Math.max(0, Math.min(100, uploadProgress));
-        // Published count only updates when upload is 100% complete
-        const publishedCount = uploadProgress === 100 ? 1 : 0;
+        // Calculate progress for multiple uploads
+        // Each image contributes 100/totalUploads to the overall progress
+        const progressPerImage = 100 / totalUploads;
+        const completedImages = uploadingIndex;
+        const currentImageProgress = uploadProgress;
+        const overallProgress = (completedImages * progressPerImage) + (currentImageProgress * progressPerImage / 100);
+        const displayProgress = Math.max(0, Math.min(100, overallProgress));
+        // Published count updates as each image completes
+        const publishedCount = uploadProgress === 100 ? uploadingIndex + 1 : uploadingIndex;
 
         return (
             <div className="upload-modal-overlay">
@@ -287,9 +332,9 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                 strokeDashoffset={`${2 * Math.PI * 45 * (1 - displayProgress / 100)}`}
                             />
                         </svg>
-                        <div className="progress-percentage">{displayProgress}%</div>
+                        <div className="progress-percentage">{Math.round(displayProgress)}%</div>
                     </div>
-                    <p className="progress-text">Published <strong>{publishedCount}</strong> of <strong>1</strong> images...</p>
+                    <p className="progress-text">Published <strong>{publishedCount}</strong> of <strong>{totalUploads}</strong> images...</p>
                 </div>
             </div>
         );
@@ -320,8 +365,8 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         );
     }
 
-    // Upload Screen (when no image selected)
-    if (!selectedFile) {
+    // Upload Screen (when no images selected)
+    if (selectedFiles.length === 0) {
         return (
             <div className="upload-modal-overlay" onClick={handleCancel}>
                 <div className="upload-modal" onClick={(e) => e.stopPropagation()}>
@@ -362,27 +407,18 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                 <button type="button" className="upload-browse-link" onClick={(e) => {
                                     e.stopPropagation();
                                     fileInputRef.current?.click();
-                                }}>Chọn</button> ảnh từ máy tính, điện thoại
+                                }}>Chọn</button> ảnh từ máy tính, điện thoại (có thể chọn nhiều ảnh)
                             </p>
                             <p className="upload-max-size">Tối 10 MB</p>
                             <input
                                 type="file"
                                 accept="image/*"
                                 className="upload-file-input"
-                                multiple={false}
-                                {...imageRegister}
-                                onChange={(e) => {
-                                    imageRegister.onChange(e);
-                                    handleFileInput(e);
-                                }}
-                                ref={(e) => {
-                                    fileInputRef.current = e;
-                                    imageRegister.ref(e);
-                                }}
+                                multiple={true}
+                                onChange={handleFileInput}
+                                ref={fileInputRef}
                             />
                         </div>
-
-                        {errors.image && <p className="error-text">{errors.image.message}</p>}
 
                         {/* Guidelines */}
                         <div className="upload-guidelines">
@@ -439,132 +475,219 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className="upload-modal-content">
-                    {/* Photo Preview */}
-                    <div className="upload-preview-container">
-                        <div className="upload-preview">
-                            <img
-                                src={URL.createObjectURL(selectedFile)}
-                                alt="Preview"
-                                className="upload-preview-image"
-                            />
-                            {loading && (
-                                <div className="image-upload-overlay">
-                                    <div className="upload-spinner"></div>
-                                    <p className="upload-text">Đang tải...</p>
-                                </div>
-                            )}
-                            {!loading && (
-                                <button
-                                    className="upload-remove-file"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedFile(null);
-                                        if (fileInputRef.current) {
-                                            fileInputRef.current.value = '';
-                                        }
-                                        setValue('image', new DataTransfer().files);
-                                    }}
-                                >
-                                    <X size={16} />
-                                </button>
-                            )}
-                        </div>
+                {/* Content - Scrollable container with all images and their forms */}
+                <div className="upload-modal-content" style={{ maxHeight: '80vh', overflowY: 'auto', padding: '20px' }}>
+                    {/* Header with add more button */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
+                            Đã chọn {imagesData.length} {imagesData.length === 1 ? 'ảnh' : 'ảnh'}
+                        </h3>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const input = document.createElement('input');
+                                input.type = 'file';
+                                input.accept = 'image/*';
+                                input.multiple = true;
+                                input.onchange = (event) => {
+                                    const target = event.target as HTMLInputElement;
+                                    if (target.files && target.files.length > 0) {
+                                        const newFiles = Array.from(target.files);
+                                        setSelectedFiles([...selectedFiles, ...newFiles]);
+                                    }
+                                };
+                                input.click();
+                            }}
+                            style={{ fontSize: '14px' }}
+                        >
+                            <Upload size={16} style={{ marginRight: '8px' }} />
+                            Thêm ảnh
+                        </Button>
                     </div>
 
-                    {/* Form Fields */}
-                    <form onSubmit={handleSubmit(onSubmit, onError)} className="upload-form-fields">
-                        <div className="form-group">
-                            <Label htmlFor="imageTitle">Tiêu đề</Label>
-                            <Input
-                                id="imageTitle"
-                                type="text"
-                                {...register('imageTitle')}
-                                placeholder="Thêm tiêu đề cho ảnh của bạn"
-                            />
-                            {errors.imageTitle && <p className="error-text">{errors.imageTitle.message}</p>}
-                        </div>
-                        <div className="form-group">
-                            <Label htmlFor="imageCategory">Danh mục</Label>
-                            {loadingCategories ? (
-                                <div style={{ padding: '8px', color: '#666' }}>Đang tải danh mục...</div>
-                            ) : categories.length === 0 ? (
-                                <div style={{ padding: '8px', color: '#999' }}>Danh mục không tồn tại</div>
-                            ) : (
-                                <select
-                                    id="imageCategory"
-                                    {...register('imageCategory')}
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        border: '1px solid #e5e5e5',
-                                        borderRadius: '6px',
-                                        fontSize: '0.9375rem',
-                                        backgroundColor: 'white',
-                                    }}
-                                >
-                                    <option value="">Chọn một danh mục...</option>
-                                    {categories.map((cat) => (
-                                        <option key={cat._id} value={cat._id}>
-                                            {cat.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            )}
-                            {errors.imageCategory && <p className="error-text">{errors.imageCategory.message}</p>}
-                        </div>
-                        <div className="form-group">
-                            <Label htmlFor="location">Vị trí chụp ảnh (không bắt buộc)</Label>
-                            <Input
-                                id="location"
-                                type="text"
-                                {...register('location')}
-                                placeholder="Phú Quốc,..."
-                            />
-                        </div>
-                        <div className="form-group">
-                            <Label htmlFor="cameraModel">Camera Model (không bắt buộc)</Label>
-                            <Input
-                                id="cameraModel"
-                                type="text"
-                                {...register('cameraModel')}
-                                placeholder="Sony A7 III,..."
-                            />
-                        </div>
-
-                        {/* Footer */}
-                        <div className="upload-modal-footer">
-                            <a href="#" className="footer-link"></a>
-                            <div className="footer-buttons">
-                                <Button type="button" variant="outline" onClick={handleCancel}>
-                                    Huỷ
-                                </Button>
-                                <div className="submit-button-wrapper">
-                                    <Button
-                                        ref={submitButtonRef}
-                                        type="submit"
-                                        disabled={loading || !isFormValid}
-                                        onMouseEnter={() => {
-                                            if (!isFormValid && !loading) {
-                                                setShowTooltip(true);
-                                            }
+                    {/* Grid of images with individual forms */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+                        gap: '24px',
+                        marginBottom: '24px'
+                    }}>
+                        {imagesData.map((imgData, index) => (
+                            <div key={index} style={{
+                                border: '1px solid #e5e5e5',
+                                borderRadius: '12px',
+                                padding: '16px',
+                                backgroundColor: 'white',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                            }}>
+                                {/* Image Preview */}
+                                <div style={{ position: 'relative', marginBottom: '16px' }}>
+                                    <img
+                                        src={URL.createObjectURL(imgData.file)}
+                                        alt={`Preview ${index + 1}`}
+                                        style={{
+                                            width: '100%',
+                                            height: '200px',
+                                            objectFit: 'cover',
+                                            borderRadius: '8px',
+                                            border: '1px solid #e5e5e5'
                                         }}
-                                        onMouseLeave={() => {
-                                            setShowTooltip(false);
+                                    />
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const newFiles = selectedFiles.filter((_, i) => i !== index);
+                                            setSelectedFiles(newFiles);
+                                            // Remove from imagesData
+                                            setImagesData(prev => prev.filter((_, i) => i !== index));
+                                        }}
+                                        style={{
+                                            position: 'absolute',
+                                            top: '8px',
+                                            right: '8px',
+                                            background: 'rgba(0, 0, 0, 0.7)',
+                                            border: 'none',
+                                            borderRadius: '50%',
+                                            width: '28px',
+                                            height: '28px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: 'pointer',
+                                            color: 'white'
                                         }}
                                     >
-                                        {loading ? 'Đang tải...' : 'Gửi'}
-                                    </Button>
-                                    {showTooltip && !isFormValid && (
-                                        <div className="submit-tooltip">
-                                            Bạn chưa nhập đủ thông tin
-                                        </div>
-                                    )}
+                                        <X size={16} />
+                                    </button>
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: '8px',
+                                        left: '8px',
+                                        background: 'rgba(0, 0, 0, 0.7)',
+                                        color: 'white',
+                                        padding: '4px 10px',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontWeight: '600'
+                                    }}>
+                                        {index + 1} / {imagesData.length}
+                                    </div>
+                                </div>
+
+                                {/* Form Fields for this image */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    {/* Title */}
+                                    <div>
+                                        <Label htmlFor={`title-${index}`} style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>
+                                            Tiêu đề <span style={{ color: 'red' }}>*</span>
+                                        </Label>
+                                        <Input
+                                            id={`title-${index}`}
+                                            type="text"
+                                            value={imgData.title}
+                                            onChange={(e) => updateImageData(index, 'title', e.target.value)}
+                                            placeholder="Thêm tiêu đề cho ảnh của bạn"
+                                            style={{
+                                                borderColor: imgData.errors.title ? '#ef4444' : undefined
+                                            }}
+                                        />
+                                        {imgData.errors.title && (
+                                            <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>
+                                                {imgData.errors.title}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Category */}
+                                    <div>
+                                        <Label htmlFor={`category-${index}`} style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>
+                                            Danh mục <span style={{ color: 'red' }}>*</span>
+                                        </Label>
+                                        {loadingCategories ? (
+                                            <div style={{ padding: '8px', color: '#666', fontSize: '14px' }}>Đang tải danh mục...</div>
+                                        ) : categories.length === 0 ? (
+                                            <div style={{ padding: '8px', color: '#999', fontSize: '14px' }}>Danh mục không tồn tại</div>
+                                        ) : (
+                                            <select
+                                                id={`category-${index}`}
+                                                value={imgData.category}
+                                                onChange={(e) => updateImageData(index, 'category', e.target.value)}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '8px 12px',
+                                                    border: `1px solid ${imgData.errors.category ? '#ef4444' : '#e5e5e5'}`,
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.9375rem',
+                                                    backgroundColor: 'white',
+                                                }}
+                                            >
+                                                <option value="">Chọn một danh mục...</option>
+                                                {categories.map((cat) => (
+                                                    <option key={cat._id} value={cat._id}>
+                                                        {cat.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        )}
+                                        {imgData.errors.category && (
+                                            <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>
+                                                {imgData.errors.category}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Location */}
+                                    <div>
+                                        <Label htmlFor={`location-${index}`} style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>
+                                            Địa điểm
+                                        </Label>
+                                        <Input
+                                            id={`location-${index}`}
+                                            type="text"
+                                            value={imgData.location}
+                                            onChange={(e) => updateImageData(index, 'location', e.target.value)}
+                                            placeholder="Phú Quốc,..."
+                                        />
+                                    </div>
+
+                                    {/* Camera Model */}
+                                    <div>
+                                        <Label htmlFor={`camera-${index}`} style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>
+                                            Camera Model
+                                        </Label>
+                                        <Input
+                                            id={`camera-${index}`}
+                                            type="text"
+                                            value={imgData.cameraModel}
+                                            onChange={(e) => updateImageData(index, 'cameraModel', e.target.value)}
+                                            placeholder="Sony A7 III,..."
+                                        />
+                                    </div>
                                 </div>
                             </div>
+                        ))}
+                    </div>
+
+                    {/* Footer with Submit Button */}
+                    <div className="upload-modal-footer" style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #e5e5e5', position: 'sticky', bottom: 0, backgroundColor: 'white' }}>
+                        <a href="#" className="footer-link"></a>
+                        <div className="footer-buttons">
+                            <Button type="button" variant="outline" onClick={handleCancel}>
+                                Huỷ
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={handleSubmitAll}
+                                disabled={loading || !isFormValid}
+                                style={{ minWidth: '120px' }}
+                            >
+                                {loading ? 'Đang tải...' : `Gửi ${imagesData.length} ảnh`}
+                            </Button>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>

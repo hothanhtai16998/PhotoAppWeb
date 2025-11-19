@@ -46,21 +46,35 @@ export const Header = memo(function Header() {
     const handleRefresh = () => {
       if (location.pathname === '/') {
         // After upload, the image is already in the store (added by uploadImage)
-        // We just need to ensure it's visible by refreshing with the correct filter
-        // If user has "Tất cả" selected, refresh with no filter
-        // If user has a specific category, refresh with that category (the uploaded image should match)
+        // Refresh without category filter first to ensure uploaded image is preserved
+        // Then re-apply category filter if needed
         timeoutId = setTimeout(() => {
+          // First, refresh without category filter to get all images
+          // This ensures the uploaded image is in the backend response
           fetchImages({
             page: 1,
             _refresh: true,
             search: searchQuery || undefined,
-            category: currentCategory, // Preserve current category filter
+            category: undefined, // No category filter initially
+          }).then(() => {
+            // If user had a category filter, re-apply it after a short delay
+            // The preservation logic will keep the uploaded image visible even if it doesn't match
+            if (currentCategory) {
+              setTimeout(() => {
+                fetchImages({
+                  page: 1,
+                  category: currentCategory,
+                }).catch(() => {
+                  // Silently fail
+                });
+              }, 500);
+            }
           }).catch((error) => {
             console.error('Error refreshing images after upload:', error);
             // Silently fail - don't show error toast as this is just a refresh
             // The uploaded image is already in the store and visible
           });
-        }, 2000) // Increased delay to ensure backend has fully processed and indexed
+        }, 3000) // Increased delay to ensure backend has fully processed and indexed
       }
     }
 

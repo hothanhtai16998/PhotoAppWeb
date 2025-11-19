@@ -5,7 +5,7 @@
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: rgba(0, 0, 0, 0.5);
+	background: rgba(98, 98, 98, 0.5);
 	z-index: 1000;
 	display: flex;
 	align-items: center;
@@ -19,7 +19,7 @@
 	background: #fff;
 	border-radius: 12px;
 	width: 100%;
-	max-width: 800px;
+	max-width: 1400px;
 	max-height: 90vh;
 	overflow-y: auto;
 	box-shadow: 0 20px 60px

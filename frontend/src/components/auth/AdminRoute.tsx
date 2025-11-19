@@ -12,7 +12,7 @@ export default function AdminRoute() {
     }, [user, isInitializing, fetchMe]);
 
     if (isInitializing) {
-        return <div>Loading...</div>;
+        return <div>Đang tải...</div>;
     }
 
     if (!user) {
