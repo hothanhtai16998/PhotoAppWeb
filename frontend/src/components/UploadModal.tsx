@@ -42,6 +42,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     const [totalUploads, setTotalUploads] = useState(0);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loadingCategories, setLoadingCategories] = useState(false);
+    const [showTooltip, setShowTooltip] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -409,7 +410,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                     fileInputRef.current?.click();
                                 }}>Chọn</button> ảnh từ máy tính, điện thoại (có thể chọn nhiều ảnh)
                             </p>
-                            <p className="upload-max-size">Tối 10 MB</p>
+                            <p className="upload-max-size">Tối đa 10 MB</p>
                             <input
                                 type="file"
                                 accept="image/*"
@@ -420,31 +421,8 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                             />
                         </div>
 
-                        {/* Guidelines */}
-                        <div className="upload-guidelines">
-                            <div className="guideline-column">
-                                <ul>
-                                    <li>High quality images (for photos, at least 5MP)</li>
-                                    <li>No AI content allowed</li>
-                                </ul>
-                            </div>
-                            <div className="guideline-column">
-                                <ul>
-                                    <li>Only upload images you <strong>own the rights</strong> to</li>
-                                    <li>Zero tolerance for nudity, violence or hate</li>
-                                </ul>
-                            </div>
-                            <div className="guideline-column">
-                                <ul>
-                                    <li>Respect the intellectual property of others</li>
-                                    <li>Read the <a href="#" className="guideline-link">PhotoApp Terms</a></li>
-                                </ul>
-                            </div>
-                        </div>
-
                         {/* Footer */}
                         <div className="upload-modal-footer">
-                            <a href="#" className="footer-link">Read the PhotoApp License</a>
                             <div className="footer-buttons">
                                 <Button type="button" variant="outline" onClick={handleCancel}>
                                     Huỷ
@@ -674,18 +652,61 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                     {/* Footer with Submit Button */}
                     <div className="upload-modal-footer" style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #e5e5e5', position: 'sticky', bottom: 0, backgroundColor: 'white' }}>
                         <a href="#" className="footer-link"></a>
-                        <div className="footer-buttons">
+                        <div className="footer-buttons" style={{ position: 'relative', display: 'flex', gap: '12px', alignItems: 'center' }}>
                             <Button type="button" variant="outline" onClick={handleCancel}>
                                 Huỷ
                             </Button>
-                            <Button
-                                type="button"
-                                onClick={handleSubmitAll}
-                                disabled={loading || !isFormValid}
-                                style={{ minWidth: '120px' }}
+                            <div
+                                style={{
+                                    position: 'relative',
+                                    display: 'inline-block'
+                                }}
+                                onMouseEnter={() => {
+                                    if (!isFormValid && !loading) {
+                                        setShowTooltip(true);
+                                    }
+                                }}
+                                onMouseLeave={() => {
+                                    setShowTooltip(false);
+                                }}
                             >
-                                {loading ? 'Đang tải...' : `Gửi ${imagesData.length} ảnh`}
-                            </Button>
+                                <Button
+                                    type="button"
+                                    onClick={handleSubmitAll}
+                                    disabled={loading || !isFormValid}
+                                    style={{ minWidth: '120px' }}
+                                >
+                                    {loading ? 'Đang tải...' : `Gửi ${imagesData.length} ảnh`}
+                                </Button>
+                                {showTooltip && !isFormValid && !loading && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: 'calc(100% + 8px)',
+                                        right: 0,
+                                        padding: '10px 14px',
+                                        backgroundColor: '#1f2937',
+                                        color: 'white',
+                                        borderRadius: '8px',
+                                        fontSize: '13px',
+                                        whiteSpace: 'nowrap',
+                                        zIndex: 10000,
+                                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                                        pointerEvents: 'none'
+                                    }}>
+                                        Vui lòng điền đầy đủ các trường có dấu <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            right: '20px',
+                                            width: 0,
+                                            height: 0,
+                                            borderLeft: '6px solid transparent',
+                                            borderRight: '6px solid transparent',
+                                            borderTop: '6px solid #1f2937'
+                                        }}></div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
