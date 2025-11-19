@@ -463,6 +463,7 @@ const ImageModal = ({
                             let hoveredBarIndex = -1;
                             let minDistance = Infinity;
                             let barCenterX = 0;
+                            let barTopY = 0;
 
                             bars.forEach((bar, index) => {
                               const barRect = bar.getBoundingClientRect();
@@ -475,6 +476,8 @@ const ImageModal = ({
                                   minDistance = distance;
                                   hoveredBarIndex = index;
                                   barCenterX = barCenter;
+                                  // Get the top of the bar (where the tooltip should appear)
+                                  barTopY = barRect.top;
                                 }
                               }
                             });
@@ -503,7 +506,7 @@ const ImageModal = ({
                                 views: data.views,
                                 downloads: data.downloads,
                                 x: finalX,
-                                y: chartInnerRect.top - 15
+                                y: barTopY - 8
                               });
                             } else {
                               setHoveredBar(null);
