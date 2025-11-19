@@ -1,21 +1,10 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useImageStore } from '@/stores/useImageStore';
-import {
-  Download,
-  Bookmark,
-  Plus,
-  Edit,
-  Share2,
-  Info,
-  MoreVertical,
-  ZoomIn,
-  CheckCircle2,
-  ChevronDown,
-  X
-} from 'lucide-react';
+import { Download } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
 import CategoryNavigation from './CategoryNavigation';
+import ImageModal from './ImageModal';
 import { toast } from 'sonner';
 import './ImageGrid.css';
 
@@ -25,10 +14,6 @@ const ImageGrid = () => {
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const isLoadingMoreRef = useRef(false);
   const [selectedImage, setSelectedImage] = useState<Image | null>(null);
-  const modalContentRef = useRef<HTMLDivElement>(null);
-  const relatedImagesLoadMoreRef = useRef<HTMLDivElement>(null);
-  const [relatedImagesLimit, setRelatedImagesLimit] = useState(12);
-  const [isLoadingRelatedImages, setIsLoadingRelatedImages] = useState(false);
 
   // Initial load
   useEffect(() => {
@@ -36,147 +21,6 @@ const ImageGrid = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Close modal on Escape key and handle overlay scrolling
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && selectedImage) {
-        setSelectedImage(null);
-      }
-    };
-
-    // Handle wheel events to scroll modal content when scrolling on overlay or anywhere
-    const handleWheel = (e: Event) => {
-      if (!selectedImage || !modalContentRef.current) return;
-
-      const wheelEvent = e as WheelEvent;
-      const target = e.target as HTMLElement;
-
-      // Don't interfere if scrolling inside the modal content itself
-      if (modalContentRef.current.contains(target)) {
-        return;
-      }
-
-      // Prevent default scrolling
-      wheelEvent.preventDefault();
-
-      // Scroll the modal content instead
-      const modalContent = modalContentRef.current;
-      modalContent.scrollTop += wheelEvent.deltaY;
-    };
-
-    if (selectedImage) {
-      document.addEventListener('keydown', handleEscape);
-      // Prevent page/body scrolling when modal is open
-      document.body.style.overflow = 'hidden';
-      // Prevent scrolling on the image grid container
-      const gridContainer = document.querySelector('.image-grid-container');
-      if (gridContainer) {
-        (gridContainer as HTMLElement).style.overflow = 'hidden';
-      }
-
-      // Add wheel event listener to document to catch all scroll events
-      document.addEventListener('wheel', handleWheel, { passive: false });
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.removeEventListener('wheel', handleWheel);
-      document.body.style.overflow = '';
-      const gridContainer = document.querySelector('.image-grid-container');
-      if (gridContainer) {
-        (gridContainer as HTMLElement).style.overflow = '';
-      }
-    };
-  }, [selectedImage]);
-
-  // Reset related images limit when selected image changes
-  useEffect(() => {
-    if (selectedImage) {
-      setRelatedImagesLimit(12);
-    }
-  }, [selectedImage]);
-
-  // Get related images (same category, excluding current image) with infinite scroll
-  const relatedImages = useMemo(() => {
-    if (!selectedImage || images.length === 0) return [];
-
-    const currentCategoryId = typeof selectedImage.imageCategory === 'string'
-      ? selectedImage.imageCategory
-      : selectedImage.imageCategory?._id;
-
-    let filtered: Image[];
-
-    if (!currentCategoryId) {
-      // If no category, return other images from current view (excluding current)
-      filtered = images.filter(img => img._id !== selectedImage._id);
-    } else {
-      // Filter images by same category, excluding current image
-      filtered = images.filter(img => {
-        if (img._id === selectedImage._id) return false;
-        const imgCategoryId = typeof img.imageCategory === 'string'
-          ? img.imageCategory
-          : img.imageCategory?._id;
-        return imgCategoryId === currentCategoryId;
-      });
-    }
-
-    // Return limited images for infinite scroll
-    return filtered.slice(0, relatedImagesLimit);
-  }, [selectedImage, images, relatedImagesLimit]);
-
-  // Check if there are more related images to load
-  const hasMoreRelatedImages = useMemo(() => {
-    if (!selectedImage || images.length === 0) return false;
-
-    const currentCategoryId = typeof selectedImage.imageCategory === 'string'
-      ? selectedImage.imageCategory
-      : selectedImage.imageCategory?._id;
-
-    let filtered: Image[];
-
-    if (!currentCategoryId) {
-      filtered = images.filter(img => img._id !== selectedImage._id);
-    } else {
-      filtered = images.filter(img => {
-        if (img._id === selectedImage._id) return false;
-        const imgCategoryId = typeof img.imageCategory === 'string'
-          ? img.imageCategory
-          : img.imageCategory?._id;
-        return imgCategoryId === currentCategoryId;
-      });
-    }
-
-    return filtered.length > relatedImagesLimit;
-  }, [selectedImage, images, relatedImagesLimit]);
-
-  // Infinite scroll for related images (modal content scrolling)
-  useEffect(() => {
-    if (!selectedImage || !relatedImagesLoadMoreRef.current || isLoadingRelatedImages || !modalContentRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry.isIntersecting && hasMoreRelatedImages && !isLoadingRelatedImages) {
-          setIsLoadingRelatedImages(true);
-          // Load more images after a short delay for smooth UX
-          setTimeout(() => {
-            setRelatedImagesLimit(prev => prev + 12);
-            setIsLoadingRelatedImages(false);
-          }, 300);
-        }
-      },
-      {
-        root: modalContentRef.current, // Use modal content as root for scrolling detection
-        rootMargin: '200px',
-      }
-    );
-
-    observer.observe(relatedImagesLoadMoreRef.current);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [selectedImage, hasMoreRelatedImages, isLoadingRelatedImages]);
 
   // Note: Header component handles the refresh event to maintain category filters
   // ImageGrid doesn't need to listen to refresh events to avoid conflicts
@@ -540,179 +384,17 @@ const ImageGrid = () => {
 
       {/* Image Modal */}
       {selectedImage && (
-        <>
-          <div
-            className="image-modal-overlay"
-            onClick={() => setSelectedImage(null)}
-          />
-          <div
-            className="image-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="image-modal-header">
-              {/* Left: User Info */}
-              <div className="modal-header-left">
-                {selectedImage.uploadedBy.avatarUrl ? (
-                  <img
-                    src={selectedImage.uploadedBy.avatarUrl}
-                    alt={selectedImage.uploadedBy.displayName || selectedImage.uploadedBy.username}
-                    className="modal-user-avatar"
-                  />
-                ) : (
-                  <div className="modal-user-avatar-placeholder">
-                    {(selectedImage.uploadedBy.displayName || selectedImage.uploadedBy.username || 'U').charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="modal-user-info">
-                  <div className="modal-user-name">
-                    {selectedImage.uploadedBy.displayName?.trim() || selectedImage.uploadedBy.username}
-                    <CheckCircle2 className="verified-badge" size={16} />
-                  </div>
-                  <div className="modal-user-status">Available for hire</div>
-                </div>
-              </div>
-
-              {/* Right: Action Buttons */}
-              <div className="modal-header-right">
-                <button className="modal-action-btn" title="Save">
-                  <Bookmark size={20} />
-                </button>
-                <button className="modal-action-btn" title="Add">
-                  <Plus size={20} />
-                </button>
-                <button className="modal-action-btn" title="Edit image">
-                  <Edit size={20} />
-                </button>
-                <button
-                  className="modal-download-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDownloadImage(selectedImage, e);
-                  }}
-                  title="Download"
-                >
-                  <span>Download</span>
-                  <ChevronDown size={16} />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Image Content - Scrollable */}
-            <div
-              className="image-modal-content"
-              ref={modalContentRef}
-            >
-              {/* Main Image */}
-              <div className="modal-main-image-container">
-                <img
-                  src={selectedImage.imageUrl}
-                  alt={selectedImage.imageTitle || 'Photo'}
-                  className="modal-image"
-                />
-              </div>
-
-              {/* Related Images Section */}
-              {relatedImages.length > 0 && (
-                <div className="modal-related-images">
-                  <h3 className="related-images-title">More from this category</h3>
-                  <div className="related-images-grid">
-                    {relatedImages.map((image) => {
-                      const imageType = imageTypes.get(image._id) || 'landscape';
-                      return (
-                        <div
-                          key={image._id}
-                          className={`related-image-item ${imageType}`}
-                          onClick={() => {
-                            setSelectedImage(image);
-                            // Scroll to top of modal content
-                            if (modalContentRef.current) {
-                              modalContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-                            }
-                          }}
-                        >
-                          <ProgressiveImage
-                            src={image.imageUrl}
-                            thumbnailUrl={image.thumbnailUrl}
-                            smallUrl={image.smallUrl}
-                            regularUrl={image.regularUrl}
-                            alt={image.imageTitle || 'Photo'}
-                            onLoad={(img) => {
-                              if (!processedImages.current.has(image._id) && currentImageIds.has(image._id)) {
-                                handleImageLoad(image._id, img);
-                              }
-                            }}
-                          />
-                          <div className="related-image-overlay">
-                            <span className="related-image-title">{image.imageTitle}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* Infinite scroll trigger for related images */}
-                  {hasMoreRelatedImages && (
-                    <div ref={relatedImagesLoadMoreRef} className="related-images-load-more-trigger" />
-                  )}
-                  {isLoadingRelatedImages && (
-                    <div className="related-images-loading">
-                      <div className="loading-spinner" />
-                      <p>Loading more images...</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="image-modal-footer">
-              {/* Left: Stats */}
-              <div className="modal-footer-left">
-                <div className="modal-stat">
-                  <span className="stat-label">Views</span>
-                  <span className="stat-value">292,310</span>
-                </div>
-                <div className="modal-stat">
-                  <span className="stat-label">Downloads</span>
-                  <span className="stat-value">2,213</span>
-                </div>
-              </div>
-
-              {/* Center: Featured & Zoom */}
-              <div className="modal-footer-center">
-                <div className="modal-featured">Featured in Photos</div>
-                <button className="modal-zoom-btn">
-                  <ZoomIn size={16} />
-                  <span>Zoom in on this image</span>
-                </button>
-              </div>
-
-              {/* Right: Actions */}
-              <div className="modal-footer-right">
-                <button className="modal-footer-btn">
-                  <Share2 size={18} />
-                  <span>Share</span>
-                </button>
-                <button className="modal-footer-btn">
-                  <Info size={18} />
-                  <span>Info</span>
-                </button>
-                <button className="modal-footer-btn">
-                  <MoreVertical size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Close Button */}
-            <button
-              className="modal-close-btn"
-              onClick={() => setSelectedImage(null)}
-              aria-label="Close modal"
-            >
-              <X size={24} />
-            </button>
-          </div>
-        </>
+        <ImageModal
+          image={selectedImage}
+          images={images}
+          onClose={() => setSelectedImage(null)}
+          onImageSelect={setSelectedImage}
+          onDownload={handleDownloadImage}
+          imageTypes={imageTypes}
+          onImageLoad={handleImageLoad}
+          currentImageIds={currentImageIds}
+          processedImages={processedImages}
+        />
       )}
     </div>
   );

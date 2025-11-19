@@ -1,0 +1,368 @@
+import { useEffect, useMemo, useState, useRef } from 'react';
+import {
+  Bookmark,
+  Plus,
+  Edit,
+  Share2,
+  Info,
+  MoreVertical,
+  ZoomIn,
+  CheckCircle2,
+  ChevronDown,
+  X
+} from 'lucide-react';
+import type { Image } from '@/types/image';
+import ProgressiveImage from './ProgressiveImage';
+import './ImageModal.css';
+
+interface ImageModalProps {
+  image: Image;
+  images: Image[];
+  onClose: () => void;
+  onImageSelect: (image: Image) => void;
+  onDownload: (image: Image, e: React.MouseEvent) => void;
+  imageTypes: Map<string, 'portrait' | 'landscape'>;
+  onImageLoad: (imageId: string, img: HTMLImageElement) => void;
+  currentImageIds: Set<string>;
+  processedImages: React.MutableRefObject<Set<string>>;
+}
+
+const ImageModal = ({
+  image,
+  images,
+  onClose,
+  onImageSelect,
+  onDownload,
+  imageTypes,
+  onImageLoad,
+  currentImageIds,
+  processedImages,
+}: ImageModalProps) => {
+  const modalContentRef = useRef<HTMLDivElement>(null);
+  const relatedImagesLoadMoreRef = useRef<HTMLDivElement>(null);
+  const [relatedImagesLimit, setRelatedImagesLimit] = useState(12);
+  const [isLoadingRelatedImages, setIsLoadingRelatedImages] = useState(false);
+
+  // Reset related images limit when image changes
+  useEffect(() => {
+    setRelatedImagesLimit(12);
+  }, [image]);
+
+  // Get related images (same category, excluding current image) with infinite scroll
+  const relatedImages = useMemo(() => {
+    if (!image || images.length === 0) return [];
+
+    const currentCategoryId = typeof image.imageCategory === 'string'
+      ? image.imageCategory
+      : image.imageCategory?._id;
+
+    let filtered: Image[];
+
+    if (!currentCategoryId) {
+      // If no category, return other images from current view (excluding current)
+      filtered = images.filter(img => img._id !== image._id);
+    } else {
+      // Filter images by same category, excluding current image
+      filtered = images.filter(img => {
+        if (img._id === image._id) return false;
+        const imgCategoryId = typeof img.imageCategory === 'string'
+          ? img.imageCategory
+          : img.imageCategory?._id;
+        return imgCategoryId === currentCategoryId;
+      });
+    }
+
+    // Return limited images for infinite scroll
+    return filtered.slice(0, relatedImagesLimit);
+  }, [image, images, relatedImagesLimit]);
+
+  // Check if there are more related images to load
+  const hasMoreRelatedImages = useMemo(() => {
+    if (!image || images.length === 0) return false;
+
+    const currentCategoryId = typeof image.imageCategory === 'string'
+      ? image.imageCategory
+      : image.imageCategory?._id;
+
+    let filtered: Image[];
+
+    if (!currentCategoryId) {
+      filtered = images.filter(img => img._id !== image._id);
+    } else {
+      filtered = images.filter(img => {
+        if (img._id === image._id) return false;
+        const imgCategoryId = typeof img.imageCategory === 'string'
+          ? img.imageCategory
+          : img.imageCategory?._id;
+        return imgCategoryId === currentCategoryId;
+      });
+    }
+
+    return filtered.length > relatedImagesLimit;
+  }, [image, images, relatedImagesLimit]);
+
+  // Infinite scroll for related images (modal content scrolling)
+  useEffect(() => {
+    if (!relatedImagesLoadMoreRef.current || isLoadingRelatedImages || !modalContentRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && hasMoreRelatedImages && !isLoadingRelatedImages) {
+          setIsLoadingRelatedImages(true);
+          // Load more images after a short delay for smooth UX
+          setTimeout(() => {
+            setRelatedImagesLimit(prev => prev + 12);
+            setIsLoadingRelatedImages(false);
+          }, 300);
+        }
+      },
+      {
+        root: modalContentRef.current, // Use modal content as root for scrolling detection
+        rootMargin: '200px',
+      }
+    );
+
+    observer.observe(relatedImagesLoadMoreRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMoreRelatedImages, isLoadingRelatedImages]);
+
+  // Close modal on Escape key and handle overlay scrolling
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    // Handle wheel events to scroll modal content when scrolling on overlay or anywhere
+    const handleWheel = (e: Event) => {
+      if (!modalContentRef.current) return;
+
+      const wheelEvent = e as WheelEvent;
+      const target = e.target as HTMLElement;
+
+      // Don't interfere if scrolling inside the modal content itself
+      if (modalContentRef.current.contains(target)) {
+        return;
+      }
+
+      // Prevent default scrolling
+      wheelEvent.preventDefault();
+
+      // Scroll the modal content instead
+      const modalContent = modalContentRef.current;
+      modalContent.scrollTop += wheelEvent.deltaY;
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    // Prevent page/body scrolling when modal is open
+    document.body.style.overflow = 'hidden';
+    // Prevent scrolling on the image grid container
+    const gridContainer = document.querySelector('.image-grid-container');
+    if (gridContainer) {
+      (gridContainer as HTMLElement).style.overflow = 'hidden';
+    }
+
+    // Add wheel event listener to document to catch all scroll events
+    document.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('wheel', handleWheel);
+      document.body.style.overflow = '';
+      const gridContainer = document.querySelector('.image-grid-container');
+      if (gridContainer) {
+        (gridContainer as HTMLElement).style.overflow = '';
+      }
+    };
+  }, [onClose]);
+
+  return (
+    <>
+      <div
+        className="image-modal-overlay"
+        onClick={onClose}
+      />
+      <div
+        className="image-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="image-modal-header">
+          {/* Left: User Info */}
+          <div className="modal-header-left">
+            {image.uploadedBy.avatarUrl ? (
+              <img
+                src={image.uploadedBy.avatarUrl}
+                alt={image.uploadedBy.displayName || image.uploadedBy.username}
+                className="modal-user-avatar"
+              />
+            ) : (
+              <div className="modal-user-avatar-placeholder">
+                {(image.uploadedBy.displayName || image.uploadedBy.username || 'U').charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="modal-user-info">
+              <div className="modal-user-name">
+                {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
+                <CheckCircle2 className="verified-badge" size={16} />
+              </div>
+              <div className="modal-user-status">Available for hire</div>
+            </div>
+          </div>
+
+          {/* Right: Action Buttons */}
+          <div className="modal-header-right">
+            {/* <button className="modal-action-btn" title="Save">
+              <Bookmark size={20} />
+            </button>
+            <button className="modal-action-btn" title="Add">
+              <Plus size={20} />
+            </button>
+            <button className="modal-action-btn" title="Edit image">
+              <Edit size={20} />
+            </button> */}
+            <button
+              className="modal-download-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDownload(image, e);
+              }}
+              title="Download"
+            >
+              <span>Tải xuống</span>
+              <ChevronDown size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* Modal Image Content - Scrollable */}
+        <div
+          className="image-modal-content"
+          ref={modalContentRef}
+        >
+          {/* Main Image */}
+          <div className="modal-main-image-container">
+            <img
+              src={image.imageUrl}
+              alt={image.imageTitle || 'Photo'}
+              className="modal-image"
+            />
+          </div>
+
+          {/* Modal Footer */}
+          <div className="image-modal-footer">
+            {/* Left: Stats */}
+            <div className="modal-footer-left">
+              <div className="modal-footer-left-stats">
+                <div className="modal-stat">
+                  <span className="stat-label">Views</span>
+                  <span className="stat-value">292,310</span>
+                </div>
+                <div className="modal-stat">
+                  <span className="stat-label">Downloads</span>
+                  <span className="stat-value">2,213</span>
+                </div>
+              </div>
+              {/* Image Info */}
+              <div className="modal-image-info">
+                {image.imageTitle && (
+                  <div className="image-info-title">{image.imageTitle}</div>
+                )}
+                {(image.location || image.cameraModel) && (
+                  <div className="image-info-details">
+                    {image.location && <span>{image.location}</span>}
+                    {image.location && image.cameraModel && <span> • </span>}
+                    {image.cameraModel && <span>{image.cameraModel}</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right: Actions */}
+            <div className="modal-footer-right">
+              <button className="modal-footer-btn">
+                <Share2 size={18} />
+                <span>Chia sẻ</span>
+              </button>
+              <button className="modal-footer-btn">
+                <Info size={18} />
+                <span>Thông tin</span>
+              </button>
+              <button className="modal-footer-btn">
+                <MoreVertical size={18} />
+              </button>
+            </div>
+          </div>
+
+          {/* Related Images Section */}
+          {relatedImages.length > 0 && (
+            <div className="modal-related-images">
+              <h3 className="related-images-title">More from this category</h3>
+              <div className="related-images-grid">
+                {relatedImages.map((relatedImage) => {
+                  const imageType = imageTypes.get(relatedImage._id) || 'landscape';
+                  return (
+                    <div
+                      key={relatedImage._id}
+                      className={`related-image-item ${imageType}`}
+                      onClick={() => {
+                        onImageSelect(relatedImage);
+                        // Scroll to top of modal content
+                        if (modalContentRef.current) {
+                          modalContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                    >
+                      <ProgressiveImage
+                        src={relatedImage.imageUrl}
+                        thumbnailUrl={relatedImage.thumbnailUrl}
+                        smallUrl={relatedImage.smallUrl}
+                        regularUrl={relatedImage.regularUrl}
+                        alt={relatedImage.imageTitle || 'Photo'}
+                        onLoad={(img) => {
+                          if (!processedImages.current.has(relatedImage._id) && currentImageIds.has(relatedImage._id)) {
+                            onImageLoad(relatedImage._id, img);
+                          }
+                        }}
+                      />
+                      <div className="related-image-overlay">
+                        <span className="related-image-title">{relatedImage.imageTitle}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Infinite scroll trigger for related images */}
+              {hasMoreRelatedImages && (
+                <div ref={relatedImagesLoadMoreRef} className="related-images-load-more-trigger" />
+              )}
+              {isLoadingRelatedImages && (
+                <div className="related-images-loading">
+                  <div className="loading-spinner" />
+                  <p>Đang tải ảnh...</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Close Button */}
+        {/* <button
+          className="modal-close-btn"
+          onClick={onClose}
+          aria-label="Close modal"
+        >
+          <X size={24} />
+        </button> */}
+      </div>
+    </>
+  );
+};
+
+export default ImageModal;
+
