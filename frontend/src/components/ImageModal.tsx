@@ -40,8 +40,57 @@ const ImageModal = ({
   const [isLoadingRelatedImages, setIsLoadingRelatedImages] = useState(false);
   const [views, setViews] = useState<number>(image.views || 0);
   const [downloads, setDownloads] = useState<number>(image.downloads || 0);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'views' | 'downloads'>('views');
+  const [hoveredBar, setHoveredBar] = useState<{ date: string; views: number; downloads: number; x: number; y: number } | null>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const infoButtonRef = useRef<HTMLButtonElement>(null);
   const incrementedViewIds = useRef<Set<string>>(new Set());
   const currentImageIdRef = useRef<string | null>(null);
+
+  // Generate accurate chart data - only show actual data for today, 0 for previous days
+  const chartData = useMemo(() => {
+    const publishedDate = new Date(image.createdAt);
+    publishedDate.setHours(0, 0, 0, 0);
+
+    // Get today's date in local timezone
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Helper to format date as YYYY-MM-DD for reliable comparison (using local timezone)
+    const formatDate = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const todayStr = formatDate(today);
+
+    return Array.from({ length: 14 }, (_, i) => {
+      // Calculate date: i=0 is 13 days ago, i=13 is today (0 days ago)
+      const daysAgo = 13 - i;
+      const date = new Date(today);
+      date.setDate(today.getDate() - daysAgo);
+      date.setHours(0, 0, 0, 0);
+
+      // Compare dates properly to determine if this is today
+      const dateStr = formatDate(date);
+      const isToday = dateStr === todayStr;
+      const isBeforePublished = date < publishedDate;
+
+      // Only show actual data for today, 0 for all previous days
+      const viewsValue = (isToday && !isBeforePublished) ? (views || 0) : 0;
+      const downloadsValue = (isToday && !isBeforePublished) ? (downloads || 0) : 0;
+
+      return {
+        date,
+        views: viewsValue,
+        downloads: downloadsValue,
+        isBeforePublished,
+      };
+    });
+  }, [image.createdAt, views, downloads]);
 
   // Reset related images limit and update stats when image changes
   useEffect(() => {
@@ -50,6 +99,27 @@ const ImageModal = ({
     setDownloads(image.downloads || 0);
     currentImageIdRef.current = image._id;
   }, [image]);
+
+  // Close info modal when clicking outside
+  useEffect(() => {
+    if (!showInfoModal) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        infoButtonRef.current &&
+        !infoButtonRef.current.contains(target) &&
+        !target.closest('.info-modal')
+      ) {
+        setShowInfoModal(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showInfoModal]);
 
   // Increment view count when modal opens (only once per image)
   useEffect(() => {
@@ -301,11 +371,11 @@ const ImageModal = ({
             <div className="modal-footer-left">
               <div className="modal-footer-left-stats">
                 <div className="modal-stat">
-                  <span className="stat-label">Views</span>
+                  <span className="stat-label">Lượt xem</span>
                   <span className="stat-value">{views.toLocaleString()}</span>
                 </div>
                 <div className="modal-stat">
-                  <span className="stat-label">Downloads</span>
+                  <span className="stat-label">Lượt tải</span>
                   <span className="stat-value">{downloads.toLocaleString()}</span>
                 </div>
               </div>
@@ -339,10 +409,125 @@ const ImageModal = ({
                 <Share2 size={18} />
                 <span>Chia sẻ</span>
               </button>
-              <button className="modal-footer-btn">
-                <Info size={18} />
-                <span>Thông tin</span>
-              </button>
+              <div style={{ position: 'relative' }}>
+                <button
+                  ref={infoButtonRef}
+                  className={`modal-footer-btn ${showInfoModal ? 'active' : ''}`}
+                  onClick={() => setShowInfoModal(!showInfoModal)}
+                >
+                  <Info size={18} />
+                  <span>Thông tin</span>
+                </button>
+                {/* Info Modal */}
+                {showInfoModal && (
+                  <div className="info-modal-wrapper">
+                    <div className="info-modal">
+                      <div className="info-modal-header">
+                        <h2 className="info-modal-title">Thông tin</h2>
+                        <button
+                          className="info-modal-close"
+                          onClick={() => setShowInfoModal(false)}
+                          aria-label="Close info modal"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <div className="info-modal-content">
+                        <div className="info-published">
+                          Đã đăng vào {(() => {
+                            const daysAgo = Math.floor((Date.now() - new Date(image.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+                            if (daysAgo === 0) return 'hôm nay';
+                            if (daysAgo === 1) return '1 ngày trước';
+                            return `${daysAgo} ngày trước`;
+                          })()}
+                        </div>
+
+                        {/* Chart Container */}
+                        <div
+                          className="info-chart-container"
+                          ref={chartContainerRef}
+                          onMouseMove={(e) => {
+                            if (!chartContainerRef.current) return;
+
+                            const chartInner = chartContainerRef.current.querySelector('.info-chart') as HTMLElement;
+                            if (!chartInner) return;
+
+                            const chartInnerRect = chartInner.getBoundingClientRect();
+                            const x = e.clientX - chartInnerRect.left;
+                            const barWidth = chartInnerRect.width / 14;
+                            const barIndex = Math.floor(x / barWidth);
+
+                            if (barIndex >= 0 && barIndex < chartData.length) {
+                              const data = chartData[barIndex];
+                              const dateStr = data.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+                              setHoveredBar({
+                                date: dateStr,
+                                views: data.views,
+                                downloads: data.downloads,
+                                x: chartInnerRect.left + (barIndex * barWidth) + (barWidth / 2),
+                                y: chartInnerRect.top - 10
+                              });
+                            }
+                          }}
+                          onMouseLeave={() => setHoveredBar(null)}
+                        >
+                          <div className="info-chart">
+                            {chartData.map((data, i) => {
+                              const value = activeTab === 'views' ? data.views : data.downloads;
+                              const maxValue = activeTab === 'views'
+                                ? Math.max(...chartData.map(d => d.views), 1)
+                                : Math.max(...chartData.map(d => d.downloads), 1);
+                              const height = maxValue > 0 ? (value / maxValue) * 100 : 0;
+
+                              return (
+                                <div
+                                  key={i}
+                                  className={`info-chart-bar ${data.isBeforePublished ? 'before-published' : ''}`}
+                                  style={{ height: `${Math.max(height, 2)}%` }}
+                                />
+                              );
+                            })}
+                          </div>
+                          {hoveredBar && (
+                            <div
+                              className="info-chart-tooltip"
+                              style={{
+                                left: `${hoveredBar.x}px`,
+                                top: `${hoveredBar.y}px`,
+                                transform: 'translate(-50%, -100%)'
+                              }}
+                            >
+                              <div>{hoveredBar.date} (UTC)</div>
+                              {activeTab === 'views' ? (
+                                <div>Đã xem {hoveredBar.views.toLocaleString()} lần</div>
+                              ) : (
+                                <div>Đã tải {hoveredBar.downloads.toLocaleString()} lần</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Tabs */}
+                        <div className="info-tabs">
+                          <button
+                            className={`info-tab ${activeTab === 'views' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('views')}
+                          >
+                            Lượt xem
+                          </button>
+                          <button
+                            className={`info-tab ${activeTab === 'downloads' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('downloads')}
+                          >
+                            Lượt tải
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
               <button className="modal-footer-btn">
                 <MoreVertical size={18} />
               </button>
@@ -352,7 +537,7 @@ const ImageModal = ({
           {/* Related Images Section */}
           {relatedImages.length > 0 && (
             <div className="modal-related-images">
-              <h3 className="related-images-title">More from this category</h3>
+              <h3 className="related-images-title">Các ảnh cùng chủ đề</h3>
               <div className="related-images-grid">
                 {relatedImages.map((relatedImage) => {
                   const imageType = imageTypes.get(relatedImage._id) || 'landscape';
